@@ -1,0 +1,18 @@
+[
+    {
+        "id": "94bafab2-a5b9-4dd6-9e09-54bb5e740e1c",
+        "nombre": "Virtualizacion video",
+        "descripcion": "video sobre la installacion de debian en una maquina virtual y la configuracion basica",
+        "fecha_limite": "2026-10-01 08:42",
+        "estado": "pendiente",
+        "alerta_12h_enviada": false
+    },
+    {
+        "id": "63979954-5d96-4473-a530-bcb59c4a818e",
+        "nombre": "tecnologias multimedia guion",
+        "descripcion": "Guion de l videeo de fin de curso",
+        "fecha_limite": "2026-10-02 07:59",
+        "estado": "completada",
+        "alerta_12h_enviada": false
+    }
+]
