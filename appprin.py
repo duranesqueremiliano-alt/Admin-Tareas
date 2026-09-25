@@ -289,7 +289,17 @@ class AdministradorTareas:
         ).pack(
             side="left"
         )
-
+        
+        #Editar
+        ttk.Button(
+            botones,
+            text="✎ Editar tarea",
+            command=self.editar_actual
+        
+        ).pack(
+            side="left",
+            padx=8
+        )
 
         # Eliminar
         ttk.Button(
@@ -1027,10 +1037,204 @@ class AdministradorTareas:
         self.refrescar_listas()
 
 
-    # ==========================================================
-    # ELIMINAR
-    # ==========================================================
 
+
+    def editar_actual(self):
+        
+        tarea_id = self.obtener_id_seleccionado()
+
+        if tarea_id is None:
+            return
+       
+        tarea_encontrada = None
+
+        for tarea in self.tareas:
+            if tarea["id"] == tarea_id:
+                tarea_encontrada = tarea
+                break
+
+        if tarea_encontrada is None:
+            return
+
+
+        ventana_editar = tk.Toplevel(self.root)
+        ventana_editar.title("Editar tarea")
+        ventana_editar.geometry("500x450")
+        ventana_editar.transient(self.root)
+        ventana_editar.grab_set()
+
+
+        ttk.Label(
+            ventana_editar,
+            text="Nombre de la tarea:"
+        ).pack(
+            anchor="w",
+            padx=20,
+            pady=(20, 5)
+        )
+
+        entrada_nombre = ttk.Entry(ventana_editar)
+
+        entrada_nombre.pack(
+            fill="x",
+            padx=20
+        )
+
+        entrada_nombre.insert(
+            0,
+            tarea_encontrada["nombre"]
+        )
+
+
+        fecha_limite = datetime.strptime(
+            tarea_encontrada["fecha_limite"],
+            FORMATO_FECHA
+        )
+
+
+        ttk.Label(
+            ventana_editar,
+            text="Fecha (AAAA-MM-DD):"
+        ).pack(
+            anchor="w",
+            padx=20,
+            pady=(15, 5)
+        )
+
+        entrada_fecha = ttk.Entry(ventana_editar)
+
+        entrada_fecha.pack(
+            fill="x",
+            padx=20
+        )
+
+        entrada_fecha.insert(
+            0,
+            fecha_limite.strftime("%Y-%m-%d")
+        )
+
+
+        ttk.Label(
+            ventana_editar,
+            text="Hora (HH:MM):"
+        ).pack(
+            anchor="w",
+            padx=20,
+            pady=(15, 5)
+        )
+
+        entrada_hora = ttk.Entry(ventana_editar)
+
+        entrada_hora.pack(
+            fill="x",
+            padx=20
+        )
+
+        entrada_hora.insert(
+            0,
+            fecha_limite.strftime("%H:%M")
+        )
+
+
+        ttk.Label(
+            ventana_editar,
+            text="Descripción:"
+        ).pack(
+            anchor="w",
+            padx=20,
+            pady=(15, 5)
+        )
+
+        entrada_descripcion = tk.Text(
+            ventana_editar,
+            height=6
+        )
+
+        entrada_descripcion.pack(
+            fill="both",
+            padx=20
+        )
+
+        entrada_descripcion.insert(
+            "1.0",
+            tarea_encontrada.get("descripcion", "")
+        )
+
+
+        def guardar_cambios():
+
+            nuevo_nombre = entrada_nombre.get().strip()
+            nueva_fecha = entrada_fecha.get().strip()
+            nueva_hora = entrada_hora.get().strip()
+
+            nueva_descripcion = entrada_descripcion.get(
+                "1.0",
+                "end"
+            ).strip()
+
+
+            if not nuevo_nombre:
+                messagebox.showwarning(
+                    "Aviso",
+                    "El nombre no puede estar vacío."
+                )
+                return
+
+
+            try:
+                nueva_fecha_limite = datetime.strptime(
+                    f"{nueva_fecha} {nueva_hora}",
+                    FORMATO_FECHA
+                )
+
+            except ValueError:
+                messagebox.showerror(
+                    "Error",
+                    "Fecha u hora incorrecta.\n\n"
+                    "Fecha: AAAA-MM-DD\n"
+                    "Hora: HH:MM"
+                )
+                return
+
+
+            tarea_encontrada["nombre"] = nuevo_nombre
+            tarea_encontrada["descripcion"] = nueva_descripcion
+
+            tarea_encontrada["fecha_limite"] = (
+                nueva_fecha_limite.strftime(FORMATO_FECHA)
+            )
+
+
+            if tarea_encontrada["estado"] == "expirada":
+                if nueva_fecha_limite > datetime.now():
+                    tarea_encontrada["estado"] = "pendiente"
+
+            elif tarea_encontrada["estado"] == "pendiente":
+                if nueva_fecha_limite <= datetime.now():
+                    tarea_encontrada["estado"] = "expirada"
+
+
+            tarea_encontrada["alerta_12h_enviada"] = False
+
+            self.guardar_tareas()
+            self.refrescar_listas()
+
+            messagebox.showinfo(
+                "Tarea editada",
+                "Los cambios se guardaron correctamente."
+            )
+
+            ventana_editar.destroy()
+
+
+        ttk.Button(
+            ventana_editar,
+            text="Guardar cambios",
+            command=guardar_cambios
+        ).pack(
+            pady=20
+        )
+    
     def eliminar_actual(self):
 
         tarea_id = self.obtener_id_seleccionado()
