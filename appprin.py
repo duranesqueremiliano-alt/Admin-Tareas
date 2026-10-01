@@ -1,7 +1,7 @@
 import json
 import uuid
 import tkinter as tk
-
+import customtkinter as ctk
 from tkinter import ttk, messagebox
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -53,9 +53,10 @@ class AdministradorTareas:
 
     def crear_interfaz(self):
 
-        contenedor = ttk.Frame(
+        contenedor = ctk.CTkFrame(
             self.root,
-            padding=15
+            fg_color="#111827",
+            corner_radius=0,
         )
 
         contenedor.pack(
@@ -65,15 +66,21 @@ class AdministradorTareas:
 
 
         # Título
-        titulo = ttk.Label(
+        titulo = ctk.CTkLabel(
             contenedor,
             text="Administrador de Tareas",
-            font=("Arial", 20, "bold")
+            font=ctk.CTkFont(
+                family="Arial",
+                size=28,
+                weight="bold"
+            ),
+            text_color="white"
         )
 
         titulo.pack(
             anchor="w",
-            pady=(0, 12)
+            padx=25,
+            pady=(25, 15)
         )
 
 
@@ -1291,7 +1298,10 @@ class AdministradorTareas:
 
 if __name__ == "__main__":
 
-    root = tk.Tk()
+    ctk.set_appearance_mode("dark")
+    ctk.set_default_color_theme("blue")
+
+    root = ctk.CTk()
 
     app = AdministradorTareas(
         root
