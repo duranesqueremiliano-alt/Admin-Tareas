@@ -53,19 +53,152 @@ class AdministradorTareas:
 
     def crear_interfaz(self):
 
-        contenedor = ctk.CTkFrame(
+        # ======================================================
+        # ESTRUCTURA PRINCIPAL
+        # ======================================================
+
+        sidebar = ctk.CTkFrame(
             self.root,
-            fg_color="#111827",
-            corner_radius=0,
+            width=220,
+            corner_radius=0
         )
 
-        contenedor.pack(
+        sidebar.pack(
+            side="left",
+            fill="y"
+        )
+
+        sidebar.pack_propagate(False)
+
+
+        # Área derecha
+        contenido = ctk.CTkFrame(
+            self.root,
+            corner_radius=0,
+            fg_color="#111827"
+        )
+
+        contenido.pack(
+            side="right",
             fill="both",
             expand=True
         )
 
 
-        # Título
+        # ======================================================
+        # SIDEBAR
+        # ======================================================
+
+        logo = ctk.CTkLabel(
+            sidebar,
+            text="TASKFLOW",
+            font=ctk.CTkFont(
+                size=24,
+                weight="bold"
+            )
+        )
+
+        logo.pack(
+            padx=20,
+            pady=(30, 35)
+        )
+
+
+        boton_inicio = ctk.CTkButton(
+            sidebar,
+            text="🏠  Inicio",
+            anchor="w",
+            height=45
+        )
+
+        boton_inicio.pack(
+            fill="x",
+            padx=15,
+            pady=5
+        )
+
+
+        boton_tareas = ctk.CTkButton(
+            sidebar,
+            text="📋  Mis tareas",
+            anchor="w",
+            height=45
+        )
+
+        boton_tareas.pack(
+            fill="x",
+            padx=15,
+            pady=5
+        )
+
+
+        boton_pendientes = ctk.CTkButton(
+            sidebar,
+            text="⏳  Pendientes",
+            anchor="w",
+            height=45,
+            command=lambda: self.notebook.select(0)
+        )
+
+        boton_pendientes.pack(
+            fill="x",
+            padx=15,
+            pady=5
+        )
+
+
+        boton_completadas = ctk.CTkButton(
+            sidebar,
+            text="✅  Completadas",
+            anchor="w",
+            height=45,
+            command=lambda: self.notebook.select(1)
+        )
+
+        boton_completadas.pack(
+            fill="x",
+            padx=15,
+            pady=5
+        )
+
+
+        boton_expiradas = ctk.CTkButton(
+            sidebar,
+            text="⚠  Expiradas",
+            anchor="w",
+            height=45,
+            command=lambda: self.notebook.select(2)
+        )
+
+        boton_expiradas.pack(
+            fill="x",
+            padx=15,
+            pady=5
+        )
+
+
+        # ======================================================
+        # CONTENIDO PRINCIPAL
+        # ======================================================
+
+        contenedor = ctk.CTkFrame(
+            contenido,
+            fg_color="#111827",
+            corner_radius=0
+        )
+
+        contenedor.pack(
+            fill="both",
+            expand=True,
+            padx=20,
+            pady=20
+        )
+
+
+        # ======================================================
+        # TÍTULO
+        # ======================================================
+
         titulo = ctk.CTkLabel(
             contenedor,
             text="Administrador de Tareas",
@@ -79,8 +212,7 @@ class AdministradorTareas:
 
         titulo.pack(
             anchor="w",
-            padx=25,
-            pady=(25, 15)
+            pady=(0, 15)
         )
 
 
@@ -100,7 +232,9 @@ class AdministradorTareas:
 
 
         # Primera fila
-        fila1 = ttk.Frame(formulario)
+        fila1 = ttk.Frame(
+            formulario
+        )
 
         fila1.pack(
             fill="x",
@@ -112,10 +246,14 @@ class AdministradorTareas:
         ttk.Label(
             fila1,
             text="Nombre:"
-        ).pack(side="left")
+        ).pack(
+            side="left"
+        )
 
 
-        self.entrada_nombre = ttk.Entry(fila1)
+        self.entrada_nombre = ttk.Entry(
+            fila1
+        )
 
         self.entrada_nombre.pack(
             side="left",
@@ -129,7 +267,9 @@ class AdministradorTareas:
         ttk.Label(
             fila1,
             text="Fecha (AAAA-MM-DD):"
-        ).pack(side="left")
+        ).pack(
+            side="left"
+        )
 
 
         self.entrada_fecha = ttk.Entry(
@@ -147,7 +287,9 @@ class AdministradorTareas:
         ttk.Label(
             fila1,
             text="Hora (HH:MM):"
-        ).pack(side="left")
+        ).pack(
+            side="left"
+        )
 
 
         self.entrada_hora = ttk.Entry(
@@ -161,8 +303,10 @@ class AdministradorTareas:
         )
 
 
-        # Poner automáticamente una fecha sugerida
-        fecha_sugerida = datetime.now() + timedelta(hours=24)
+        # Fecha sugerida
+        fecha_sugerida = datetime.now() + timedelta(
+            hours=24
+        )
 
         self.entrada_fecha.insert(
             0,
@@ -176,7 +320,9 @@ class AdministradorTareas:
 
 
         # Segunda fila
-        fila2 = ttk.Frame(formulario)
+        fila2 = ttk.Frame(
+            formulario
+        )
 
         fila2.pack(
             fill="x",
@@ -184,7 +330,7 @@ class AdministradorTareas:
         )
 
 
-        # Botón descripción
+        # Descripción
         self.boton_descripcion = ttk.Button(
             fila2,
             text="Agregar descripción ▼",
@@ -196,7 +342,7 @@ class AdministradorTareas:
         )
 
 
-        # Botón agregar
+        # Agregar
         boton_agregar = ttk.Button(
             fila2,
             text="Agregar tarea",
@@ -248,7 +394,7 @@ class AdministradorTareas:
 
 
         # ======================================================
-        # CARPETAS / PESTAÑAS
+        # PESTAÑAS
         # ======================================================
 
         self.notebook = ttk.Notebook(
@@ -288,7 +434,6 @@ class AdministradorTareas:
         )
 
 
-        # Completar
         ttk.Button(
             botones,
             text="✓ Marcar como completada",
@@ -296,19 +441,18 @@ class AdministradorTareas:
         ).pack(
             side="left"
         )
-        
-        #Editar
+
+
         ttk.Button(
             botones,
             text="✎ Editar tarea",
             command=self.editar_actual
-        
         ).pack(
             side="left",
             padx=8
         )
 
-        # Eliminar
+
         ttk.Button(
             botones,
             text="Eliminar tarea",
@@ -319,7 +463,6 @@ class AdministradorTareas:
         )
 
 
-        # Actualizar
         ttk.Button(
             botones,
             text="Actualizar",
@@ -327,7 +470,6 @@ class AdministradorTareas:
         ).pack(
             side="right"
         )
-
 
     # ==========================================================
     # CREAR PESTAÑAS
