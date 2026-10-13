@@ -1,0 +1,4 @@
+# Clave de la IA: no subir a GitHub
+config.json
+__pycache__/
+*.tmp

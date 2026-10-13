@@ -1,0 +1,19 @@
+{
+    "cuentas": [],
+    "movimientos": [],
+    "recurrentes": [],
+    "categorias": [
+        "Comida",
+        "Supermercado",
+        "Transporte",
+        "Servicios",
+        "Vivienda",
+        "Suscripciones",
+        "Entretenimiento",
+        "Salud",
+        "Educación",
+        "Ropa",
+        "Compras",
+        "Otros"
+    ]
+}
