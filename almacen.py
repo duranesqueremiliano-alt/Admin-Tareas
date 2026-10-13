@@ -1,5 +1,6 @@
 # almacen.py
 # Leer y guardar archivos JSON dentro de la carpeta datos/.
+# Este archivo NO importa customtkinter.
 
 import json
 import os
@@ -16,9 +17,13 @@ def leer_json(nombre_archivo, valor_por_defecto):
             contenido = json.load(f)
         return contenido
     except FileNotFoundError:
+        # Normal la primera vez: el archivo aún no existe.
         return valor_por_defecto
     except json.JSONDecodeError:
-        raise ArchivoDanado(f"El archivo {ruta} está dañado.")
+        # DECISIÓN PENDIENTE: el archivo existe pero está dañado.
+        # Ahora se devuelve el valor por defecto; si luego se guarda,
+        # el archivo dañado se reemplaza y su contenido se pierde.
+        return valor_por_defecto
 
 
 def escribir_json(nombre_archivo, datos):

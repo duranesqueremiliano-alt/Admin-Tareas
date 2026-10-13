@@ -59,7 +59,11 @@
   ArchivoDanado; escribir_json comprueba con leer_json antes de sobrescribir. Guardado en la raíz.
   La raíz ya solo tiene la app nueva; la vieja está en app_original/ (originales borrados por el learner).
 - Requisitos nuevos (2026-10-13): icono en la nota que abre la imagen original; búsqueda también por palabras clave;
-  orden de notas editable en el menú (representación: por decidir).
+  orden de notas editable en el menú: representación = posición en la lista (decisión del learner,
+  2026-10-13); el campo `orden` del modelo ya no hace falta.
+- Requisitos nuevos (2026-10-13 13:49, learner): papelera (archivo aparte; borrado definitivo tras 1 día);
+  cambios en memoria y autoguardado de notas.json cada 30 s; nota nueva entra como primera del menú;
+  notificación "la nota fue creada". Detalles sin decidir: restaurar, guardado al cerrar, imagen al borrar.
 - Sin decidir:
   qué significa "importar" fórmulas/diagramas (¿desde la foto?, ¿archivos?, ¿LaTeX?), diferencia
   entre "tarea" y "trabajo".
