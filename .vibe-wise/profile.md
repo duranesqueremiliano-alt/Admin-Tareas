@@ -4,7 +4,7 @@ Learning mode: active
 Onboarding: complete
 
 ## Project
-Situation: Existing repo, rewrite from scratch (2026-10-12) in a new Git branch; old code stays on main as reference.
+Situation: Existing repo, rewrite from scratch (2026-10-12). New app lives in the repo root; old app copied to app_original/ (learner deletes the root originals).
 Building: Nueva versión escrita en su mayoría por el learner: Notas + administrador de Tareas y trabajos (sin Gastos). Notas con foto → texto por IA, palabras clave automáticas, importar fórmulas y diagramas.
 Codebase familiarity: New (old code was vibecoded)
 Learning scope: Entire system
@@ -22,6 +22,7 @@ Checkpoint frequency: Normal
 Question style: Open-ended
 Implementation style: More hands-on — learner writes the code; AI gives only the bases (concepts, structure hints), reviews and asks questions. AI writes code only when explicitly asked for a specific piece.
 Language: Spanish
+File handling: cuando el learner pega código en el chat, el AI lo guarda tal cual en el archivo correspondiente de la raíz del proyecto (pedido 2026-10-12).
 
 ## Strong Concepts
 No demonstrated understanding recorded yet.
