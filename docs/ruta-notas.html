@@ -1,0 +1,1209 @@
+<title>Ruta de notas.py</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,750&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: arriba el archivo completo (todas sus funciones, se llena línea por línea); abajo, pegado al borde, el cuadro para escribir la línea actual. Un apartado (pestaña) por archivo. */
+:root {
+  --bg: #f3f5f9; --surface: #ffffff; --ink: #18202e; --muted: #5b6577; --line: #d9deea;
+  --accent: #2f4fc4; --accent-soft: #e4e9fb; --done: #1f7a4d; --done-soft: #e2f3ea;
+  --warn: #9a5b00; --warn-soft: #fbefdc; --code-bg: #f8f9fc; --code-ink: #1f2a3d; --gutter: #9aa3b5;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --font-code: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151d; --surface: #1a2030; --ink: #e6eaf3; --muted: #9aa4b8; --line: #2c3548;
+    --accent: #8ea6ff; --accent-soft: #232d4d; --done: #6fd3a0; --done-soft: #183428;
+    --warn: #f0b75e; --warn-soft: #3a2c14; --code-bg: #141a27; --code-ink: #dfe5f2; --gutter: #5e6a82; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151d; --surface: #1a2030; --ink: #e6eaf3; --muted: #9aa4b8; --line: #2c3548;
+  --accent: #8ea6ff; --accent-soft: #232d4d; --done: #6fd3a0; --done-soft: #183428;
+  --warn: #f0b75e; --warn-soft: #3a2c14; --code-bg: #141a27; --code-ink: #dfe5f2; --gutter: #5e6a82; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { min-height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+.wrap { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Cabecera fija: título corto, avance y pestañas de archivo */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 6; background: var(--surface); border-bottom: 1px solid var(--line); }
+.top .wrap { padding-block: 10px 8px; display: grid; gap: 8px; }
+.top-row { display: flex; align-items: center; gap: 12px; }
+.brand { font-family: var(--font-display); font-weight: 750; font-size: 17px; white-space: nowrap; }
+.meter { flex: 1; height: 6px; border-radius: 99px; background: var(--accent-soft); overflow: hidden; min-width: 0; }
+.meter span { display: block; height: 100%; width: 0%; background: var(--done); transition: width .3s ease; }
+.count { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.tabs { display: flex; gap: 6px; overflow-x: auto; }
+.tab { flex: none; font-family: var(--font-code); font-size: 13.5px; padding: 6px 10px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.tab small { font-family: var(--font-body); font-size: 11.5px; color: var(--muted); margin-left: 4px; font-variant-numeric: tabular-nums; }
+.tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.tab[aria-selected="true"] small { color: var(--surface); }
+
+main .wrap { padding-block: 14px 24px; display: grid; gap: 12px; }
+.intro { display: grid; gap: 6px; }
+.intro p { margin: 0; color: var(--muted); }
+details.box { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; font-size: 15px; }
+details.box summary { cursor: pointer; font-weight: 700; }
+details.box[open] summary { margin-bottom: 6px; }
+details.box ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+details.box p { margin: 0 0 6px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.methods { display: flex; flex-wrap: wrap; gap: 6px; }
+.m { font-family: var(--font-code); font-size: 13px; padding: 4px 10px; border-radius: 99px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.m.solved::before { content: "✓ "; color: var(--done); font-weight: 700; }
+.m[aria-current="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.m[aria-current="true"].solved::before { color: var(--bg); }
+
+/* El archivo */
+.file { background: var(--code-bg); border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; padding-block: 8px; }
+.file-name { font-family: var(--font-code); font-size: 12.5px; color: var(--muted); padding: 0 12px 6px; border-bottom: 1px solid var(--line); margin-bottom: 6px; display: flex; justify-content: space-between; gap: 8px; }
+.rows { font-family: var(--font-code); font-size: 13.5px; line-height: 1.65; color: var(--code-ink); min-width: max-content; }
+.r { display: flex; white-space: pre; padding-right: 14px; }
+.r .n { flex: none; width: 3.2em; text-align: right; padding-right: .9em; color: var(--gutter); user-select: none; font-variant-numeric: tabular-nums; }
+.r.done .t { color: var(--code-ink); }
+.r.new { background: var(--done-soft); }
+.r.now { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.r.now .t { color: var(--accent); font-weight: 600; }
+.r.todo .t { color: var(--gutter); }
+.r.sum { cursor: pointer; }
+.r.sum .t { color: var(--muted); font-style: italic; }
+.r.sum:hover .t, .r.sum:focus-visible .t { color: var(--accent); }
+.r.label { margin-top: 6px; }
+.r.label .t { font-family: var(--font-code); font-size: 12px; color: var(--muted); }
+.r.label.cur .t { color: var(--accent); font-weight: 700; }
+.r.blank { height: .7em; }
+
+/* Cuadro para escribir: pegado abajo */
+.dock { position: sticky; bottom: 0; z-index: 5; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -6px 18px rgba(0,0,0,.06); }
+.dock .wrap { padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; max-height: 58vh; overflow-y: auto; }
+.where-am-i { font-family: var(--font-code); font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.ask { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 16.5px; line-height: 1.3; }
+.where { margin: 0; font-size: 14px; color: var(--muted); }
+.where strong { color: var(--ink); }
+.inrow { display: flex; gap: 8px; }
+.in { flex: 1; min-width: 0; font-family: var(--font-code); font-size: 16px; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.in.short { flex: none; width: 6em; }
+.btn { font: inherit; font-size: 15px; padding: 8px 13px; border-radius: 10px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 700; }
+.btn.hint { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+.btn.small { font-size: 13.5px; padding: 5px 10px; }
+.btn:focus-visible, .in:focus-visible, .tab:focus-visible, .m:focus-visible, .opt:focus-visible, .r.sum:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.fb { margin: 0; padding: 8px 11px; border-radius: 10px; font-size: 14.5px; }
+.fb.bad { background: var(--warn-soft); border-left: 3px solid var(--warn); }
+.fb.good { background: var(--done-soft); border-left: 3px solid var(--done); }
+.hintbox { margin: 0; padding: 8px 11px; border-radius: 10px; border: 1px dashed var(--line); font-size: 14.5px; display: grid; gap: 3px; }
+.hintbox code, .fb code, .where code { font-family: var(--font-code); font-size: .9em; background: var(--code-bg); padding: 1px 5px; border-radius: 5px; }
+.pill { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-left: 6px; vertical-align: 2px; background: var(--warn-soft); color: var(--warn); }
+.opts { display: grid; gap: 6px; }
+.opt { text-align: left; font: inherit; font-size: 15px; padding: 9px 11px; border-radius: 10px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.toggle { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; color: var(--muted); }
+.toggle input { width: 17px; height: 17px; accent-color: var(--accent); }
+.check pre { margin: 6px 0 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 11px; overflow-x: auto; font-family: var(--font-code); font-size: 13px; color: var(--done); }
+.check p { margin: 0 0 4px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td code { font-family: var(--font-code); font-size: .9em; white-space: nowrap; }
+.table-wrap { overflow-x: auto; }
+@media (prefers-reduced-motion: reduce) { .meter span { transition: none; } }
+</style>
+
+<div class="top">
+  <div class="wrap">
+    <div class="top-row">
+      <span class="brand">Ruta de notas.py</span>
+      <div class="meter" aria-hidden="true"><span id="bar"></span></div>
+      <span class="count" id="count">0 / 0</span>
+    </div>
+    <div class="tabs" id="tabs" role="tablist" aria-label="Archivos"></div>
+  </div>
+</div>
+
+<main>
+  <div class="wrap">
+    <div class="intro">
+      <p id="about"></p>
+      <details class="box">
+        <summary>Cómo funciona</summary>
+        <ul>
+          <li>Arriba está el archivo completo. Abajo escribes la línea marcada con ▶, sin la sangría.</li>
+          <li>Al acertar, la línea aparece en su lugar y pasas a la siguiente, aunque sea de otra función.</li>
+          <li>No importan espacios de más ni comillas simples o dobles. Sí importan las mayúsculas.</li>
+          <li><strong>Pista</strong>: primero una idea, luego la forma con huecos, al final la línea. Igual tienes que escribirla.</li>
+          <li>Lo marcado <strong>tu decisión</strong> no tiene respuesta incorrecta: cambia las líneas que siguen.</li>
+          <li>Todo se guarda en este navegador. <strong>Copiar archivo</strong> te da lo que escribiste, listo para pegar.</li>
+        </ul>
+      </details>
+    </div>
+    <div class="toolbar">
+      <div class="methods" id="methods" role="group" aria-label="Funciones del archivo"></div>
+    </div>
+    <section class="file" aria-label="Archivo">
+      <div class="file-name"><span id="fname"></span><span id="fstat"></span></div>
+      <div class="rows" id="rows"></div>
+    </section>
+    <div class="row">
+      <button class="btn" id="copy" type="button">Copiar archivo</button>
+      <label class="toggle"><input type="checkbox" id="with-tests" checked> con pruebas al final</label>
+      <span id="copy-msg" class="where" hidden></span>
+    </div>
+    <details class="box check">
+      <summary>Comprueba</summary>
+      <p id="check-how"></p>
+      <pre><code id="check-out"></code></pre>
+      <p class="where" id="check-note"></p>
+    </details>
+    <details class="box">
+      <summary>Comandos que vas a usar</summary>
+      <div class="table-wrap">
+        <table>
+          <tbody>
+            <tr><td><code>nota["clave"]</code></td><td>Lee un valor del diccionario</td></tr>
+            <tr><td><code>nota["clave"] = valor</code></td><td>Cambia o agrega un valor</td></tr>
+            <tr><td><code>for i, x in enumerate(lista):</code></td><td>Posición y elemento a la vez</td></tr>
+            <tr><td><code>lista.pop(i)</code></td><td>Saca el de la posición i y lo devuelve</td></tr>
+            <tr><td><code>lista.insert(i, x)</code></td><td>Mete x en la posición i</td></tr>
+            <tr><td><code>lista.append(x)</code></td><td>Agrega al final</td></tr>
+            <tr><td><code>lista.sort()</code></td><td>Ordena en su lugar</td></tr>
+            <tr><td><code>texto.strip()</code></td><td>Quita espacios a los lados</td></tr>
+            <tr><td><code>texto.splitlines()</code></td><td>Parte en líneas</td></tr>
+            <tr><td><code>texto.lower()</code></td><td>Minúsculas</td></tr>
+            <tr><td><code>"as" in "casa"</code></td><td>¿Un texto contiene a otro?</td></tr>
+            <tr><td><code>x is None</code></td><td>¿Es None?</td></tr>
+            <tr><td><code>.strftime(FECHA)</code> / <code>datetime.strptime(t, FECHA)</code></td><td>Fecha → texto / texto → fecha</td></tr>
+            <tr><td><code>from archivo import funcion</code></td><td>Trae una función de otro archivo tuyo</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+    <div class="row">
+      <button class="btn small" id="reset" type="button">Borrar mi avance</button>
+      <span id="confirm" class="where" hidden>¿Seguro? <button class="btn small" id="reset-yes" type="button">Sí, borrar todo</button> <button class="btn small" id="reset-no" type="button">Cancelar</button></span>
+    </div>
+  </div>
+</main>
+
+<div class="dock" id="dock" aria-live="polite">
+  <div class="wrap" id="box"></div>
+</div>
+
+<script>
+(function () {
+  // ---------- Datos: un archivo = varias funciones; cada función = líneas ----------
+  // F = línea fija (ya escrita). L = línea que escribes tú. D = decisión tuya (botones, todas valen).
+  // W = la línea solo aparece según lo que decidiste.
+  function F(lvl, code) { return { fixed: true, lvl: lvl, code: code }; }
+  function L(lvl, code, ask, where, hints, x) {
+    x = x || {};
+    return { fixed: false, lvl: lvl, code: code, ask: ask, where: where, hints: hints,
+      alt: x.alt || [], warn: x.warn || [], re: x.re || null, placement: !!x.placement };
+  }
+  function D(ask, why, opts) { return { decision: true, ask: ask, why: why, opts: opts }; }
+  function W(cond, line) { line.when = cond; return line; }
+
+  var FILES = [
+    {
+      key: "almacen", name: "almacen.py",
+      about: "Lee y guarda archivos JSON en la carpeta datos/. Si un archivo está dañado, no deja guardar encima.",
+      problems: [
+        { id: "a0", name: "Inicio del archivo", lines: [
+          L(0, "import json", "Importa el módulo que lee y escribe JSON.", "Sin sangría, arriba de todo.",
+            ["Es import seguido del nombre del formato.", "import ____"]),
+          L(0, "import os", "Importa el módulo para rutas y carpetas.", "Sin sangría.",
+            ["os viene de operating system.", "import __"]),
+          L(0, 'CARPETA_DATOS = "datos"', "Crea la constante con el nombre de la carpeta de datos.", "Sin sangría.",
+            ["Las constantes van en MAYÚSCULAS. El valor es un texto.", 'CARPETA_DATOS = "_____"']),
+          L(0, "class ArchivoDanado(Exception):", "Crea tu propio tipo de error para archivos dañados.", "Sin sangría, fuera de toda función.",
+            ["Se crea con class y se basa en Exception.", "class ArchivoDanado(_________):"],
+            { warn: [["def ArchivoDanado():", "Eso es una función. raise necesita un tipo de error, que se crea con class."]] }),
+          L(1, '"""El archivo existe, pero su contenido no es JSON válido."""', "Una clase necesita al menos una línea adentro. Escribe una descripción entre triples comillas, o pass.", "Dentro de la clase (1 sangría).",
+            ["Puede ser cualquier texto entre \"\"\" y \"\"\".", '"""El archivo existe, pero ..."""'],
+            { re: '^("""[\\s\\S]*"""|pass)$' })
+        ] },
+        { id: "a1", name: "leer_json", lines: [
+          F(0, "def leer_json(nombre_archivo, valor_por_defecto):"),
+          L(1, "ruta = os.path.join(CARPETA_DATOS, nombre_archivo)", "Arma la ruta datos/<archivo> y guárdala en ruta.", "1 sangría.",
+            ["os.path.join une la carpeta y el nombre del archivo.", "ruta = os.path.join(_____________, ______________)"]),
+          L(1, "try:", "Empieza el bloque que intenta abrir el archivo.", "1 sangría.",
+            ["Una palabra y dos puntos.", "t__:"]),
+          L(2, 'with open(ruta, "r", encoding="utf-8") as f:', "Abre el archivo para leer, con acentos bien, y llámalo f.", "Dentro del try (2 sangrías).",
+            ["with open(...) as f:, en modo \"r\" y con encoding.", 'with open(ruta, "_", encoding="_____") as f:']),
+          L(3, "contenido = json.load(f)", "Convierte lo que tiene el archivo en datos de Python y guárdalo en contenido.", "Dentro del with (3 sangrías).",
+            ["json.load recibe el archivo abierto.", "contenido = json.____(f)"],
+            { warn: [["json.load(f)", "Lo lees pero no lo guardas: se pierde."], ["contenido = f", "f es el archivo, no su contenido."]] }),
+          L(2, "return contenido", "Devuelve lo que leíste.", "2 sangrías: fuera del with, dentro del try. El archivo ya se cerró, pero contenido sigue existiendo.",
+            ["return y la variable.", "return _________"]),
+          L(1, "except FileNotFoundError:", "Atrapa el error de cuando el archivo no existe.", "1 sangría, a la altura del try.",
+            ["except y el nombre exacto del error.", "except ____NotFoundError:"]),
+          L(2, "return valor_por_defecto", "Si no existe, ¿qué devuelves?", "2 sangrías.",
+            ["Es el segundo parámetro de la función.", "return valor_por________"]),
+          L(1, "except json.JSONDecodeError:", "Atrapa el error de cuando el JSON está mal escrito.", "1 sangría.",
+            ["El error vive dentro del módulo json.", "except json.____DecodeError:"]),
+          L(2, 'raise ArchivoDanado(f"El archivo {ruta} está dañado.")', "Lanza tu error con un mensaje.", "2 sangrías.",
+            ["raise lanza un error. Entre paréntesis va el mensaje.", 'raise ArchivoDanado(f"El archivo {ruta} está dañado.")'],
+            { re: "^raise ArchivoDanado\\(.+\\)$",
+              warn: [["return ArchivoDanado", "return devuelve algo como si todo estuviera bien. Para avisar de un error se usa raise."]] })
+        ] },
+        { id: "a2", name: "escribir_json", lines: [
+          F(0, "def escribir_json(nombre_archivo, datos):"),
+          L(1, "leer_json(nombre_archivo, None)", "Primero revisa que el archivo actual no esté dañado. Si lo está, esta línea lanza el error y no se sigue.", "Primera línea (1 sangría), antes de abrir con \"w\".",
+            ["Llama a tu propia función de leer. El valor por defecto da igual.", "leer_json(______________, None)"],
+            { warn: [["leer_json(nombre_archivo)", "leer_json pide dos cosas: el archivo y el valor por defecto."]] }),
+          L(1, "os.makedirs(CARPETA_DATOS, exist_ok=True)", "Crea la carpeta si no existe.", "1 sangría.",
+            ["os.makedirs con la constante, y sin error si ya existe.", "os.makedirs(_____________, exist_ok=____)"]),
+          L(1, "ruta = os.path.join(CARPETA_DATOS, nombre_archivo)", "Arma la ruta, igual que en leer_json.", "1 sangría.",
+            ["Es la misma línea que en leer_json.", "ruta = os.path.join(...)"]),
+          L(1, 'with open(ruta, "w", encoding="utf-8") as f:', "Abre el archivo para escribir.", "1 sangría.",
+            ["Como en leer_json, pero el modo es de escribir.", 'with open(ruta, "_", encoding="utf-8") as f:']),
+          L(2, "json.dump(datos, f, ensure_ascii=False, indent=2)", "Escribe los datos en el archivo, con acentos legibles y sangría.", "Dentro del with (2 sangrías).",
+            ["json.dump recibe los datos, el archivo y dos opciones.", "json.dump(datos, f, ensure_ascii=_____, indent=_)"],
+            { alt: [["json.dump(datos, f, indent=2, ensure_ascii=False)", "También vale: el orden de las opciones con nombre no importa."]] })
+        ] }
+      ],
+      tests: [
+        'if __name__ == "__main__":',
+        '    escribir_json("prueba.json", ["Cálculo", "Física"])',
+        '    print("Leído:", leer_json("prueba.json", []))',
+        '    print("No existe:", leer_json("no_existe.json", []))'
+      ],
+      check: {
+        how: "Al final de almacen.py, dentro de if __name__ == \"__main__\":, escribe una lista con escribir_json, léela con leer_json y lee un archivo que no existe.",
+        out: "Leído: ['Cálculo', 'Física']\nNo existe: []"
+      }
+    },
+    {
+      key: "notas", name: "notas.py",
+      about: "Todas las funciones de las notas. Trabajan con una lista de diccionarios en memoria.",
+      problems: [
+        { id: "n0", name: "Inicio del archivo", lines: [
+          L(0, "from datetime import datetime", "Trae datetime para saber la fecha de hoy.", "Sin sangría.",
+            ["from módulo import cosa. Las dos palabras son iguales.", "from ________ import ________"]),
+          L(0, "import uuid", "Importa el módulo de ids aleatorios.", "Sin sangría.", ["Cuatro letras.", "import ____"]),
+          L(0, "import almacen", "Importa tu propio archivo de leer y guardar.", "Sin sangría.",
+            ["Es el nombre de tu archivo sin .py.", "import _______"]),
+          L(0, 'NOTAS = "notas.json"', "Constante con el nombre del archivo de notas.", "Sin sangría.",
+            ["MAYÚSCULAS y el nombre del archivo como texto.", 'NOTAS = "_____.json"']),
+          L(0, 'FECHA = "%Y-%m-%d %H:%M"', "Constante con el formato de fecha: año-mes-día hora:minuto.", "Sin sangría.",
+            ["%Y año, %m mes, %d día, %H hora, %M minuto.", 'FECHA = "%Y-%m-%d %_:%_"'])
+        ] },
+        { id: "n1", name: "cargar", lines: [
+          F(0, "def cargar():"),
+          L(1, "contenido = almacen.leer_json(NOTAS, [])", "Lee notas.json. Si no existe, que dé una lista vacía.", "1 sangría.",
+            ["almacen.leer_json con la constante y el valor por defecto.", "contenido = almacen.leer_json(_____, __)"],
+            { warn: [["contenido = almacen.leer_json(NOTAS, 0)", "Tus notas son una lista: el valor por defecto debe ser una lista vacía."]] }),
+          L(1, "return contenido", "Devuélvelo.", "1 sangría.", ["return y la variable.", "return _________"])
+        ] },
+        { id: "n2", name: "guardar_archivo", lines: [
+          F(0, "def guardar_archivo(lista):"),
+          L(1, "almacen.escribir_json(NOTAS, lista)", "Escribe la lista en notas.json.", "1 sangría.",
+            ["Primero el nombre del archivo, luego los datos.", "almacen.escribir_json(_____, _____)"],
+            { warn: [["almacen.escribir_json(lista)", "Falta el nombre del archivo."], ["almacen.escribir_json", "Sin paréntesis solo nombras la función; no se ejecuta."]] })
+        ] },
+        { id: "n3", name: "crear", lines: [
+          F(0, "def crear(materia):"),
+          L(1, "Id = uuid.uuid4().hex", "Genera un id aleatorio y guárdalo en Id.", "1 sangría.",
+            ["uuid.uuid4() y luego .hex para tenerlo como texto.", "Id = uuid.uuid4().___"]),
+          L(1, "fechadecreacion = datetime.now().strftime(FECHA)", "La fecha de ahora, como texto con tu formato, en fechadecreacion.", "1 sangría.",
+            ["datetime.now() es ahora; .strftime(FECHA) lo pasa a texto.", "fechadecreacion = datetime.now().________(FECHA)"]),
+          L(1, "nota = {", "Empieza el diccionario de la nota.", "1 sangría.", ["Variable, = y llave que abre.", "nota = _"]),
+          L(2, '"id": Id,', "Clave \"id\" con tu variable Id.", "Dentro del diccionario (2 sangrías).", ['"clave": valor,', '"id": __,'],
+            { alt: [['"id": (Id),', "También vale; los paréntesis sobran."]] }),
+          L(2, '"texto": "",', "Clave \"texto\", empieza vacía.", "2 sangrías.", ["Un texto vacío son dos comillas juntas.", '"texto": __,']),
+          L(2, '"materia": materia,', "Clave \"materia\" con el parámetro.", "2 sangrías.", ["El valor es el parámetro de la función.", '"materia": _______,']),
+          L(2, '"palabrasclave": [],', "Clave \"palabrasclave\", lista vacía.", "2 sangrías.", ["Lista vacía: corchetes.", '"palabrasclave": __,']),
+          L(2, '"rutaimagen": None,', "Clave \"rutaimagen\": no hay foto todavía.", "2 sangrías.", ["\"Nada\" en Python, con mayúscula.", '"rutaimagen": ____,'],
+            { warn: [['"rutaimagen": none,', "En Python es None, con N mayúscula."], ['"rutaimagen": "",', "Decidiste None para \"no hay foto\"."]] }),
+          L(2, '"fechacreacion": fechadecreacion,', "Clave \"fechacreacion\" con tu variable de fecha.", "2 sangrías.", ["El valor es la variable de dos líneas arriba.", '"fechacreacion": _______________,']),
+          L(1, "}", "Cierra el diccionario.", "1 sangría.", ["La llave que cierra.", "_"]),
+          L(1, "return nota", "Devuelve la nota.", "1 sangría.", ["return y la variable.", "return ____"])
+        ] },
+        { id: "n4", name: "buscar_posicion", lines: [
+          F(0, "def buscar_posicion(lista, id_nota):"),
+          L(1, "for i, nota in enumerate(lista):", "Recorre la lista sabiendo la posición (i) y la nota.", "1 sangría.",
+            ["enumerate te da posición y elemento a la vez.", "for i, nota in _________(lista):"],
+            { warn: [["for i, nota in enumerate(lista[nota]):", "Recorre la lista misma; nota todavía no existe aquí."], ["for nota in lista:", "Así no sabes la posición."]] }),
+          L(2, 'if nota["id"] == id_nota:', "¿Esta nota tiene el id que buscas?", "Dentro del for (2 sangrías).",
+            ["Compara el \"id\" de la nota con el parámetro, con ==.", 'if nota["__"] == id_nota:'],
+            { alt: [['if nota["id"] == (id_nota):', "También vale; los paréntesis sobran."]],
+              warn: [['if lista["id"] == id_nota:', "El id está en la nota de esta vuelta, no en la lista."], ['if nota["id"] = id_nota:', "Con un solo = asignas; para comparar es ==."]] }),
+          L(3, "return i", "La encontraste: devuelve su posición.", "Dentro del if (3 sangrías).", ["La posición está en i.", "return _"]),
+          L(1, "return None", "Si terminó el for sin encontrarla, devuelve None.", "Escríbela y luego indica su sangría.",
+            ["None significa \"no está\".", "return ____"], { placement: true })
+        ] },
+        { id: "n5", name: "guardar", lines: [
+          F(0, "def guardar(lista, nota):"),
+          L(1, 'posicion = buscar_posicion(lista, nota["id"])', "Busca si la nota ya está en la lista.", "1 sangría.",
+            ["Usa tu buscar_posicion con el id de la nota.", 'posicion = buscar_posicion(lista, nota["__"])'],
+            { warn: [['posicion = buscar_posicion(lista, lista[nota["Id"]])', "El id está en la nota, con \"id\" en minúsculas."]] }),
+          L(1, 'if nota["texto"].strip() == "":', "¿La nota está vacía (aunque tenga espacios)?", "1 sangría.",
+            ["Toma el texto, quítale espacios y compáralo con \"\".", 'if nota["texto"].______() == "":'],
+            { warn: [['if nota["texto"] == "":', "Una nota con solo espacios pasaría como si tuviera texto."], ['if nota.strip["texto"] == "":', "strip es de los textos: va después de [\"texto\"] y con paréntesis."]] }),
+          L(2, "if posicion is not None:", "Si ya existía, hay que sacarla. ¿Cómo preguntas si existía?", "Dentro del if anterior (2 sangrías).",
+            ["is not None funciona también con la posición 0.", "if posicion is ___ ____:"],
+            { alt: [["if posicion != None:", "Funciona, pero lo recomendado es is not None."]], warn: [["if posicion:", "La posición 0 cuenta como falso: una nota que esté primera nunca se borraría."]] }),
+          L(3, "lista.pop(posicion)", "Sácala de la lista.", "3 sangrías.", ["pop recibe la posición.", "lista.___(posicion)"],
+            { warn: [["lista.remove(posicion)", "remove busca un valor igual; no saca por posición."]] }),
+          L(2, 'return "borrada"', "Avisa a la pantalla.", "2 sangrías: fuera del if de la posición.", ["return y el texto que decidiste.", 'return "_______"']),
+          L(1, "elif posicion is not None:", "Si no estaba vacía pero ya existía (es una edición)...", "1 sangría, a la altura del primer if.",
+            ["elif es \"si no, si...\".", "elif posicion is not ____:"], { alt: [["elif posicion != None:", "Funciona, pero lo recomendado es is not None."]] }),
+          L(2, "vieja = lista.pop(posicion)", "Saca la versión vieja y guárdala en vieja.", "2 sangrías.", ["pop la saca y te la devuelve.", "vieja = lista.___(posicion)"]),
+          L(2, 'fecha = vieja["fechacreacion"]', "Lee la fecha de creación de la vieja.", "2 sangrías.",
+            ["Es la misma clave que en crear.", 'fecha = vieja["_____________"]'],
+            { warn: [['fecha = vieja["fecha_creacion"]', "En tu crear la clave es \"fechacreacion\", sin guion bajo: daría KeyError."]] }),
+          L(2, 'nota["fechacreacion"] = fecha', "Pásala a la nota nueva.", "2 sangrías.", ["Asignas con un =.", 'nota["fechacreacion"] = _____']),
+          L(2, 'tipo = "actualizacion"', "Recuerda que fue una actualización.", "2 sangrías.", ["Una variable con un texto.", 'tipo = "_____________"']),
+          L(1, "else:", "Si no existía...", "1 sangría.", ["Una palabra y dos puntos.", "e___:"]),
+          L(2, 'tipo = "creacion"', "Recuerda que fue una creación.", "2 sangrías.", ["Igual que arriba, con otro texto.", 'tipo = "________"']),
+          L(1, "lista.insert(0, nota)", "Pon la nota en el primer lugar.", "1 sangría, fuera del if/elif/else.",
+            ["insert: primero la posición, luego la nota.", "lista.insert(_, nota)"],
+            { warn: [["lista.insert(nota, 0)", "Al revés: primero va la posición."], ["lista.insert(0, posicion)", "Insertarías el número, no la nota."]] }),
+          L(1, "return tipo", "Devuelve qué pasó.", "1 sangría.", ["return y la variable.", "return ____"])
+        ] },
+        { id: "n6", name: "titulo", lines: [
+          F(0, "def titulo(nota):"),
+          L(1, 'for linea in nota["texto"].splitlines():', "Recorre el texto línea por línea.", "1 sangría.",
+            ["splitlines parte el texto en líneas.", 'for linea in nota["texto"].__________():'],
+            { warn: [['for linea in nota["texto"]:', "Así recorres letra por letra."]] }),
+          L(2, 'if linea.strip() != "":', "¿La línea tiene algo escrito?", "2 sangrías.",
+            ["Quítale espacios y mira si no es \"\".", 'if linea.strip() __ "":'],
+            { alt: [["if linea.strip():", "También vale: un texto vacío cuenta como falso."]], warn: [['if linea != "":', "Una línea con solo espacios pasaría."]] }),
+          L(3, "return linea.strip()", "Devuélvela limpia.", "3 sangrías.", ["La misma línea sin espacios.", "return linea._____()"]),
+          L(1, 'return "Sin título"', "Si ninguna sirvió...", "Escríbela y luego indica su sangría.",
+            ["Un texto fijo.", 'return "___ ______"'], { placement: true })
+        ] },
+        { id: "n7", name: "borrar", lines: [
+          F(0, "def borrar(lista, id_nota):"),
+          L(1, "posicion = buscar_posicion(lista, id_nota)", "¿Dónde está la nota?", "1 sangría.",
+            ["Tu función de buscar.", "posicion = ______________(lista, id_nota)"]),
+          L(1, "if posicion is None:", "¿No la encontró?", "1 sangría.", ["is None.", "if posicion is ____:"],
+            { warn: [["if not posicion:", "La posición 0 también entraría aquí."]] }),
+          L(2, "return False", "Avisa que no borró nada.", "2 sangrías.", ["False con mayúscula.", "return _____"]),
+          L(1, "lista.pop(posicion)", "Sácala.", "1 sangría.", ["pop con la posición.", "lista.___(posicion)"],
+            { warn: [["lista.pop()", "Sin posición, pop saca la última."]] }),
+          L(1, "return True", "Avisa que sí la borró.", "1 sangría.", ["True con mayúscula.", "return ____"])
+        ] },
+        { id: "n8", name: "mover", lines: [
+          F(0, "def mover(lista, id_nota, nueva_posicion):"),
+          L(1, "posicion = buscar_posicion(lista, id_nota)", "¿Dónde está ahora?", "1 sangría.", ["Tu función de buscar.", "posicion = buscar_posicion(_____, _______)"]),
+          L(1, "if posicion is None:", "¿No existe?", "1 sangría.", ["is None.", "if posicion __ ____:"]),
+          L(2, "return", "Termina sin hacer nada.", "2 sangrías.", ["Un return solo, sin nada más.", "r_____"],
+            { warn: [["pass", "pass no hace nada: el código seguiría y pop(None) daría error."], ["break", "break solo sirve dentro de un for o while."]] }),
+          L(1, "nota = lista.pop(posicion)", "Sácala y guárdala en nota.", "1 sangría.", ["pop la saca y te la devuelve.", "nota = lista.___(posicion)"],
+            { warn: [["lista.pop(posicion)", "La sacas pero no la guardas: se pierde."], ["nota = lista[posicion]", "La lees, pero sigue en la lista: quedaría duplicada."]] }),
+          L(1, "lista.insert(nueva_posicion, nota)", "Métela en su nuevo lugar.", "1 sangría.", ["insert: posición primero.", "lista.insert(______________, nota)"],
+            { warn: [["lista.insert(nota, nueva_posicion)", "Al revés: primero va la posición."]] })
+        ] },
+        { id: "n9", name: "buscar", lines: [
+          F(0, "def buscar(lista, texto):"),
+          L(1, "texto = texto.strip().lower()", "Limpia lo buscado: sin espacios y en minúsculas.", "1 sangría.",
+            ["Los textos no cambian en su lugar: guarda el resultado.", "texto = texto._____().lower()"],
+            { warn: [["texto.strip().lower()", "Calcula el texto limpio pero lo tira; texto sigue igual."]] }),
+          L(1, 'if texto == "":', "¿No buscaron nada?", "1 sangría.", ["Compara con \"\".", 'if texto == __:']),
+          L(2, "return lista", "Devuelve todas las notas.", "2 sangrías.", ["La lista completa.", "return _____"],
+            { warn: [["return []", "La barra vacía mostraría cero notas."]] }),
+          L(1, "resultados = []", "Prepara una lista vacía para los resultados.", "1 sangría.", ["Corchetes vacíos.", "resultados = __"],
+            { warn: [["resultados = lista", "Es la misma lista: al agregarle cambiarías tus notas."]] }),
+          L(1, "for nota in lista:", "Recorre las notas.", "1 sangría.", ["for ... in lista:", "for ____ in lista:"]),
+          L(2, 'encontrada = texto in nota["texto"].lower()', "Guarda en encontrada si lo buscado aparece en el texto de la nota.", "2 sangrías.",
+            ["in pregunta si un texto contiene a otro, y da True o False.", 'encontrada = texto __ nota["texto"].lower()'],
+            { warn: [['encontrada = nota["texto"] in texto', "Al revés: preguntaría si toda la nota está dentro de lo buscado."]] }),
+          L(2, 'for palabra in nota["palabrasclave"]:', "Recorre sus palabras clave.", "2 sangrías: un for dentro del otro.",
+            ["La clave como la escribiste en crear.", 'for palabra in nota["_____________"]:'],
+            { warn: [['for palabra in nota["palabras_clave"]:', "En tu crear la clave es \"palabrasclave\"."]] }),
+          L(3, "if texto in palabra.lower():", "¿Lo buscado está en esta palabra?", "3 sangrías.", ["Igual que con el texto.", "if texto in palabra._____():"]),
+          L(4, "encontrada = True", "Márcala como encontrada.", "4 sangrías.", ["True con mayúscula.", "encontrada = ____"],
+            { warn: [["resultados.append(nota)", "Si aparece en dos palabras clave, la agregarías dos veces."]] }),
+          L(2, "if encontrada:", "Después de revisar todo, ¿coincide?", "2 sangrías: fuera del for de palabras, dentro del de notas.",
+            ["encontrada ya es True o False.", "if __________:"],
+            { alt: [["if encontrada == True:", "Funciona, pero basta con if encontrada:."]] }),
+          L(3, "resultados.append(nota)", "Agrégala.", "3 sangrías.", ["append agrega al final.", "resultados.______(nota)"]),
+          L(1, "return resultados", "Devuelve lo que encontraste.", "Escríbela y luego indica su sangría.",
+            ["La lista de resultados.", "return __________"], { placement: true })
+        ] }
+      ],
+      tests: ["if __name__ == \"__main__\":", "    lista = []", "    a = crear(\"Física\")", "    a[\"texto\"] = \"Nota A\"", "    print(guardar(lista, a))", "    b = crear(\"Física\")", "    b[\"texto\"] = \"Nota B\"", "    print(guardar(lista, b))", "    a[\"texto\"] = \"Nota A editada\"", "    print(guardar(lista, a))", "    print([n[\"texto\"] for n in lista])", "    n = crear(\"Física\")", "    print(guardar(lista, n))", "    print(len(lista))", "    print(titulo(a))", "    print(titulo({\"texto\": \"\\n\\n  Límites \\nbla\"}))", "    print(titulo({\"texto\": \"\"}))", "    print(borrar(lista, b[\"id\"]))", "    print(borrar(lista, b[\"id\"]))", "    print([n[\"texto\"] for n in lista])", "    c = crear(\"Cálculo\")", "    c[\"texto\"] = \"Derivadas\"", "    guardar(lista, c)", "    print([n[\"texto\"] for n in lista])", "    mover(lista, c[\"id\"], 1)", "    print([n[\"texto\"] for n in lista])", "    c[\"palabrasclave\"] = [\"cálculo\"]", "    print([n[\"texto\"] for n in buscar(lista, \"DERIV\")])", "    print([n[\"texto\"] for n in buscar(lista, \"CÁL\")])", "    print(len(buscar(lista, \"  \")))", "    # OJO: esto escribe datos/notas.json. Quítalo cuando uses la app con notas reales.", "    guardar_archivo(lista)", "    print([n[\"texto\"] for n in cargar()])"],
+      check: {
+        how: "Ejecuta las pruebas de notas.py (las del paso de prueba completa).",
+        out: "creacion\ncreacion\nactualizacion\n['Nota A editada', 'Nota B']\nborrada\n2\nNota A editada\nLímites\nSin título\nTrue\nFalse\n['Nota A editada']\n['Derivadas', 'Nota A editada']\n['Nota A editada', 'Derivadas']\n['Derivadas']\n['Derivadas']\n2\n['Nota A editada', 'Derivadas']"
+      }
+    },
+    {
+      key: "materias", name: "materias.py",
+      about: "La lista de materias que comparten notas y tareas, guardada en materias.json.",
+      problems: [
+        { id: "m0", name: "Inicio del archivo", lines: [
+          L(0, "import almacen", "Importa tu archivo de leer y guardar.", "Sin sangría.", ["El nombre de tu archivo sin .py.", "import _______"]),
+          L(0, 'MATERIAS = "materias.json"', "Constante con el nombre del archivo.", "Sin sangría.", ["Como NOTAS en notas.py.", 'MATERIAS = "________.json"'])
+        ] },
+        { id: "m1", name: "cargar", lines: [
+          F(0, "def cargar():"),
+          L(1, "contenido = almacen.leer_json(MATERIAS, [])", "Lee materias.json; si no existe, lista vacía.", "1 sangría.",
+            ["Igual que en notas, con MATERIAS.", "contenido = almacen.leer_json(________, __)"]),
+          L(1, "return contenido", "Devuélvelo.", "1 sangría.", ["return y la variable.", "return _________"])
+        ] },
+        { id: "m2", name: "guardar_archivo", lines: [
+          F(0, "def guardar_archivo(lista):"),
+          L(1, "almacen.escribir_json(MATERIAS, lista)", "Escribe la lista en materias.json.", "1 sangría.",
+            ["Igual que en notas, con MATERIAS.", "almacen.escribir_json(________, _____)"])
+        ] },
+        { id: "m3", name: "agregar", lines: [
+          F(0, "def agregar(lista, nombre):"),
+          L(1, "nombre = nombre.strip()", "Limpia el nombre que escribió el usuario.", "1 sangría.",
+            ["Guarda el resultado en la misma variable.", "nombre = nombre._____()"],
+            { warn: [["nombre.strip()", "Lo calcula pero lo tira."], ["nombre = nombre.lower()", "Guardarías la materia en minúsculas y así saldría en el desplegable."]] }),
+          L(1, 'if nombre == "":', "¿No escribió nada?", "1 sangría.", ["Compara con \"\".", 'if nombre == __:']),
+          L(2, "return False", "No se agregó nada.", "2 sangrías.", ["False con mayúscula.", "return _____"]),
+          D("¿Cuándo cuenta como repetida?", "Tu decisión.", [
+            { t: "\"cálculo\" es la misma que \"Cálculo\" (no importan mayúsculas)", set: { dup: "ci" },
+              why: "Evita tener las dos en el desplegable. Para eso recorres la lista comparando en minúsculas." },
+            { t: "Solo si es exactamente igual", set: { dup: "ex" },
+              why: "Más simple: una línea. A cambio, \"Cálculo\" y \"cálculo\" pueden quedar las dos." }
+          ]),
+          W({ dup: "ci" }, L(1, "for materia in lista:", "Recorre las materias que ya hay.", "1 sangría.", ["for ... in lista:", "for _______ in lista:"])),
+          W({ dup: "ci" }, L(2, "if materia.lower() == nombre.lower():", "¿Es la misma, sin importar mayúsculas?", "2 sangrías.",
+            ["Las dos en minúsculas, comparadas con ==.", "if materia.lower() == nombre._____():"],
+            { warn: [["if materia == nombre:", "Así no ignoras mayúsculas."]] })),
+          W({ dup: "ci" }, L(3, "return False", "Ya existe: no la agregues.", "3 sangrías.", ["False con mayúscula.", "return _____"],
+            { warn: [["break", "Sales del for, pero el código sigue y la agrega igual."]] })),
+          W({ dup: "ex" }, L(1, "if nombre in lista:", "¿Ya está en la lista?", "1 sangría.", ["in también sirve con listas.", "if nombre __ lista:"])),
+          W({ dup: "ex" }, L(2, "return False", "Ya existe: no la agregues.", "2 sangrías.", ["False con mayúscula.", "return _____"])),
+          L(1, "lista.append(nombre)", "Agrégala.", "1 sangría, fuera de todo if y for.", ["append agrega al final.", "lista.______(nombre)"],
+            { warn: [["lista = lista + [nombre]", "Crea una lista nueva; la de quien llamó no cambia."]] }),
+          D("¿La lista queda en orden alfabético?", "Tu decisión.", [
+            { t: "Sí, ordenada", set: { orden: "alfa" }, why: "Más fácil de encontrar en el desplegable. Ojo: las que empiezan con acento, como \"Álgebra\", quedan después de la Z." },
+            { t: "No, en el orden en que se agregan", set: { orden: "fin" }, why: "Más simple, y la más nueva queda al final." }
+          ]),
+          W({ orden: "alfa" }, L(1, "lista.sort()", "Ordénala.", "1 sangría.", ["sort ordena en su lugar.", "lista.____()"],
+            { warn: [["lista = sorted(lista)", "sorted crea una lista nueva; la de quien llamó queda igual."]] })),
+          L(1, "return True", "Avisa que sí la agregó.", "1 sangría.", ["True con mayúscula.", "return ____"])
+        ] }
+      ],
+      tests: ["if __name__ == \"__main__\":", "    lista = []", "    print(agregar(lista, \"  Cálculo \"))", "    print(agregar(lista, \"cálculo\"))", "    print(agregar(lista, \"\"))", "    print(agregar(lista, \"Física\"))", "    print(lista)"],
+      check: {
+        how: "lista = []; luego imprime agregar(lista, \"  Cálculo \"), agregar(lista, \"cálculo\"), agregar(lista, \"\"), agregar(lista, \"Física\") y la lista.",
+        out: "True\nFalse\nFalse\nTrue\n['Cálculo', 'Física']",
+        note: "Eso sale si elegiste \"no importan mayúsculas\". Con \"exactamente igual\", la segunda línea es True y la lista queda ['Cálculo', 'cálculo', 'Física']."
+      }
+    },
+    {
+      key: "tareas", name: "tareas.py",
+      about: "Tareas de la escuela y de la vida diaria, con fecha límite. Estado \"activa\" o \"completada\"; \"vencida\" se calcula.",
+      problems: [
+        { id: "t0", name: "Inicio del archivo", lines: [
+          L(0, "from datetime import datetime", "Trae datetime.", "Sin sangría.", ["Como en notas.py.", "from ________ import ________"]),
+          L(0, "import uuid", "Ids aleatorios.", "Sin sangría.", ["Como en notas.py.", "import ____"]),
+          L(0, "import almacen", "Tu archivo de leer y guardar.", "Sin sangría.", ["Como en notas.py.", "import _______"]),
+          D("buscar_posicion es idéntica en notas y en tareas. ¿Qué haces?", "Tu decisión.", [
+            { t: "Importarla de notas.py", set: { reuso: "imp" }, why: "Una sola copia: si la arreglas, queda arreglada para las dos. A cambio, tareas.py necesita a notas.py." },
+            { t: "Copiarla dentro de tareas.py", set: { reuso: "copia" }, why: "tareas.py no depende de notas.py. A cambio, si la cambias, tienes que cambiar las dos." },
+            { t: "Moverla a un archivo común (utiles.py)", set: { reuso: "util" }, why: "Lo más ordenado. A cambio, un archivo más, y notas.py también la importaría de ahí." }
+          ]),
+          W({ reuso: "imp" }, L(0, "from notas import buscar_posicion", "Tráela de notas.py.", "Sin sangría.",
+            ["from archivo import función.", "from _____ import _______________"])),
+          W({ reuso: "util" }, L(0, "from utiles import buscar_posicion", "Tráela de utiles.py (y mueve allí la función).", "Sin sangría.",
+            ["from archivo import función.", "from ______ import _______________"])),
+          W({ reuso: "copia" }, (function () { var x = F(0, "# aquí va tu buscar_posicion de notas.py"); x.copyFrom = "n4"; return x; })()),
+          L(0, 'TAREAS = "tareas.json"', "Constante con el nombre del archivo.", "Sin sangría.", ["Como NOTAS.", 'TAREAS = "______.json"']),
+          L(0, 'FECHA = "%Y-%m-%d %H:%M"', "El mismo formato de fecha que en notas.", "Sin sangría.", ["Cópialo de notas.py.", 'FECHA = "%Y-%m-%d %H:%M"'])
+        ] },
+        { id: "t1", name: "crear", lines: [
+          F(0, "def crear(titulo, fecha_limite, materia):"),
+          L(1, "Id = uuid.uuid4().hex", "Genera el id.", "1 sangría.", ["Como en notas.", "Id = uuid.uuid4().___"]),
+          L(1, "fechadecreacion = datetime.now().strftime(FECHA)", "Fecha de ahora como texto.", "1 sangría.", ["Como en notas.", "fechadecreacion = datetime.now().strftime(_____)"]),
+          L(1, "tarea = {", "Empieza el diccionario.", "1 sangría.", ["Variable, = y llave.", "tarea = _"]),
+          L(2, '"id": Id,', "Clave \"id\".", "2 sangrías.", ['"clave": valor,', '"id": __,']),
+          L(2, '"titulo": titulo,', "Clave \"titulo\" con el parámetro.", "2 sangrías.", ["El valor es el parámetro.", '"titulo": ______,']),
+          L(2, '"descripcion": "",', "Clave \"descripcion\", empieza vacía.", "2 sangrías.", ["Texto vacío.", '"descripcion": __,']),
+          L(2, '"fechacreacion": fechadecreacion,', "Clave \"fechacreacion\".", "2 sangrías.", ["Como en notas.", '"fechacreacion": _______________,']),
+          L(2, '"fechalimite": fecha_limite,', "Clave \"fechalimite\" con el parámetro.", "2 sangrías.",
+            ["Sin guion bajo en la clave, como fechacreacion. El parámetro sí lo tiene.", '"fechalimite": ____________,']),
+          L(2, '"materia": materia,', "Clave \"materia\".", "2 sangrías.", ["El parámetro.", '"materia": _______,']),
+          L(2, '"estado": "activa",', "Clave \"estado\": empieza activa.", "2 sangrías.", ["Un texto.", '"estado": "______",']),
+          L(1, "}", "Cierra el diccionario.", "1 sangría.", ["La llave que cierra.", "_"]),
+          L(1, "return tarea", "Devuélvela.", "1 sangría.", ["return y la variable.", "return _____"])
+        ] },
+        { id: "t2", name: "esta_vencida", lines: [
+          F(0, "def esta_vencida(tarea):"),
+          L(1, 'if tarea["estado"] == "completada":', "Una completada nunca está vencida. ¿Cómo lo preguntas?", "1 sangría.",
+            ["Compara el estado con ==.", 'if tarea["estado"] == "__________":'],
+            { warn: [['if tarea["estado"] = "completada":', "Con un solo = asignas; para comparar es ==."]] }),
+          L(2, "return False", "No está vencida.", "2 sangrías.", ["False con mayúscula.", "return _____"]),
+          L(1, 'limite = datetime.strptime(tarea["fechalimite"], FECHA)', "Convierte la fecha límite (texto) en fecha de verdad.", "1 sangría.",
+            ["strptime: texto → fecha (p de parse). Lo contrario de strftime.", 'limite = datetime.________(tarea["fechalimite"], FECHA)'],
+            { warn: [['limite = tarea["fechalimite"]', "Sigue siendo texto; no se puede comparar con una fecha."]] }),
+          L(1, "return limite < datetime.now()", "¿Ya pasó? Devuelve el resultado de comparar.", "1 sangría.",
+            ["Si el límite es antes de ahora, ya pasó. Antes es <.", "return limite _ datetime.now()"],
+            { warn: [["return limite > datetime.now()", "Al revés: daría True cuando todavía falta."]] })
+        ] },
+        { id: "t3", name: "completar", lines: [
+          F(0, "def completar(tarea):"),
+          L(1, 'tarea["estado"] = "completada"', "Cambia su estado.", "1 sangría.",
+            ["Asignas con un solo =. El diccionario cambia en su lugar.", 'tarea["estado"] = "__________"'],
+            { warn: [['tarea["estado"] == "completada"', "Con == solo comparas; no cambia nada."], ['estado = "completada"', "Creas una variable nueva; la tarea sigue igual."]] })
+        ] }
+      ],
+      tests: ["if __name__ == \"__main__\":", "    t = crear(\"Ensayo\", \"2026-10-20 18:00\", \"Historia\")", "    print(esta_vencida(t))", "    completar(t)", "    print(t[\"estado\"])", "    print(esta_vencida(t))"],
+      check: {
+        how: "Crea una tarea con crear(\"Ensayo\", \"2026-10-20 18:00\", \"Historia\"), imprime esta_vencida(t), luego completar(t), e imprime t[\"estado\"] y esta_vencida(t).",
+        out: "True\ncompletada\nFalse",
+        note: "Después escribe tú guardar y borrar de tareas, sin esquema, mirando tu notas.py. Antes decide: ¿orden elegido por el usuario o por fecha límite? ¿Una tarea sin título se guarda? Al editar, ¿qué se conserva de la vieja?"
+      }
+    },
+    {
+      key: "gastos", name: "gastos.py",
+      about: "Cuentas de débito, crédito y efectivo; movimientos; pagos recurrentes y resumen por categoría. Todo vive en un diccionario datos.",
+      problems: [
+        { id: "g0", name: "Inicio del archivo", lines: [
+          L(0, "import calendar", "Importa el módulo que sabe cuántos días tiene cada mes.", "Sin sangría.", ["calendar, en inglés.", "import ________"]),
+          L(0, "from datetime import date, datetime, timedelta", "Trae date (un día), datetime (día y hora) y timedelta (una duración).", "Sin sangría.", ["from datetime import tres cosas separadas por comas.", "from datetime import _________________________"]),
+          L(0, "import uuid", "Ids aleatorios.", "Sin sangría.", ["Como en notas.py.", "import ____"]),
+          L(0, "import almacen", "Tu archivo de leer y guardar.", "Sin sangría.", ["Como en notas.py.", "import _______"]),
+          L(0, "GASTOS = \"gastos.json\"", "Constante con el nombre del archivo.", "Sin sangría.", ["MAYÚSCULAS y un texto.", "GASTOS = \"___________\""]),
+          L(0, "DIA = \"%Y-%m-%d\"", "Formato de fecha sin hora: año-mes-día.", "Sin sangría.", ["Como FECHA, pero sin %H:%M.", "DIA = \"________\""]),
+          F(0, "CATEGORIAS_BASE = [\"Comida\", \"Supermercado\", \"Transporte\", \"Servicios\", \"Vivienda\", \"Suscripciones\","),
+          F(0, "                   \"Entretenimiento\", \"Salud\", \"Educación\", \"Ropa\", \"Compras\", \"Otros\"]")
+        ] },
+        { id: "g_cargar", name: "cargar", lines: [
+          F(0, "def cargar():"),
+          L(1, "datos = almacen.leer_json(GASTOS, {})", "Lee gastos.json. Si no existe, un diccionario vacío.", "1 sangría.", ["Todo Gastos es un diccionario, no una lista: el valor por defecto es {}.", "datos = almacen.leer_json(GASTOS, __)"]),
+          L(1, "for clave in [\"cuentas\", \"movimientos\", \"recurrentes\"]:", "Recorre las tres claves que deben ser listas.", "1 sangría.", ["Un for sobre una lista de textos escrita ahí mismo.", "for clave in [_______________________________________]:"]),
+          L(2, "if clave not in datos:", "¿Esa clave falta en el diccionario?", "2 sangrías.", ["not in pregunta si una clave NO está.", "if clave ______ datos:"]),
+          L(3, "datos[clave] = []", "Créala como lista vacía.", "3 sangrías.", ["Asignas con la clave en una variable.", "datos[clave] = __"]),
+          L(1, "if \"categorias\" not in datos:", "¿Faltan las categorías?", "1 sangría.", ["Igual, con la clave \"categorias\".", "if \"categorias\" ______ datos:"]),
+          L(2, "datos[\"categorias\"] = list(CATEGORIAS_BASE)", "Ponle una COPIA de las categorías base.", "2 sangrías.", ["list(...) crea una lista nueva; así no cambias la constante.", "datos[\"categorias\"] = ____(CATEGORIAS_BASE)"]),
+          L(1, "return datos", "Devuelve el diccionario.", "1 sangría.", ["return y la variable.", "return _____"])
+        ] },
+        { id: "g_guardar_archivo", name: "guardar_archivo", lines: [
+          F(0, "def guardar_archivo(datos):"),
+          L(1, "almacen.escribir_json(GASTOS, datos)", "Escribe todo en gastos.json.", "1 sangría.", ["Primero el archivo, luego los datos.", "almacen.escribir_json(_____________)"])
+        ] },
+        { id: "g_a_fecha", name: "a_fecha", lines: [
+          F(0, "def a_fecha(texto):"),
+          L(1, "return datetime.strptime(texto, DIA).date()", "Convierte \"2026-11-05\" en una fecha (solo el día).", "1 sangría.", ["strptime da día y hora; .date() se queda con el día.", "return datetime.________(texto, DIA).date()"])
+        ] },
+        { id: "g_dia_valido", name: "dia_valido", lines: [
+          F(0, "def dia_valido(anio, mes, dia):"),
+          L(1, "ultimo = calendar.monthrange(anio, mes)[1]", "¿Cuántos días tiene ese mes? Guárdalo en ultimo.", "1 sangría.", ["monthrange devuelve dos números; el segundo [1] es el último día.", "ultimo = calendar.monthrange(anio, mes)___"]),
+          L(1, "return date(anio, mes, min(dia, ultimo))", "Arma la fecha sin pasarte del último día (31 de febrero → 28).", "1 sangría.", ["min elige el menor de dos números.", "return date(anio, mes, ___(dia, ultimo))"])
+        ] },
+        { id: "g_sumar_meses", name: "sumar_meses", lines: [
+          F(0, "def sumar_meses(fecha, meses, diabase):"),
+          L(1, "total = fecha.month - 1 + meses", "Cuenta los meses desde enero (0) y suma los que pides.", "1 sangría.", ["fecha.month va de 1 a 12; resta 1.", "total = fecha.month _____ meses"]),
+          L(1, "anio = fecha.year + total // 12", "¿Cuántos años te pasaste?", "1 sangría.", ["// es división entera.", "anio = fecha.year + total __ 12"]),
+          L(1, "mes = total % 12 + 1", "¿En qué mes caes?", "1 sangría.", ["% es el residuo; suma 1 para volver a 1–12.", "mes = total _ 12 + 1"]),
+          L(1, "return dia_valido(anio, mes, diabase)", "Arma la fecha con el día base, sin pasarte del mes.", "1 sangría.", ["Usa tu función dia_valido.", "return __________(anio, mes, diabase)"])
+        ] },
+        { id: "g_proxima_fecha_con_dia", name: "proxima_fecha_con_dia", lines: [
+          F(0, "def proxima_fecha_con_dia(dia, desde):"),
+          L(1, "candidata = dia_valido(desde.year, desde.month, dia)", "Prueba con ese día en el mismo mes de desde.", "1 sangría.", ["dia_valido con el año y mes de desde.", "candidata = dia_valido(_______________________, dia)"]),
+          L(1, "if candidata < desde:", "¿Ya pasó?", "1 sangría.", ["< es antes.", "if candidata _ desde:"]),
+          L(2, "candidata = sumar_meses(candidata, 1, dia)", "Entonces el mes siguiente.", "2 sangrías.", ["sumar_meses con 1.", "candidata = sumar_meses(candidata, _, dia)"]),
+          L(1, "return candidata", "Devuélvela.", "1 sangría.", ["return y la variable.", "return _________"])
+        ] },
+        { id: "g_ultima_fecha_con_dia", name: "ultima_fecha_con_dia", lines: [
+          F(0, "def ultima_fecha_con_dia(dia, hasta):"),
+          L(1, "candidata = dia_valido(hasta.year, hasta.month, dia)", "Prueba con ese día en el mes de hasta.", "1 sangría.", ["Como antes, con hasta.", "candidata = dia_valido(_______________________, dia)"]),
+          L(1, "if candidata > hasta:", "¿Todavía no llega?", "1 sangría.", ["> es después.", "if candidata _ hasta:"]),
+          L(2, "candidata = sumar_meses(candidata, -1, dia)", "Entonces el mes anterior.", "2 sangrías.", ["sumar_meses con -1.", "candidata = sumar_meses(candidata, __, dia)"]),
+          L(1, "return candidata", "Devuélvela.", "1 sangría.", ["return y la variable.", "return _________"])
+        ] },
+        { id: "g_asegurar_categoria", name: "asegurar_categoria", lines: [
+          F(0, "def asegurar_categoria(datos, nombre):"),
+          L(1, "nombre = nombre.strip()", "Limpia el nombre.", "1 sangría.", ["Como en materias.py.", "nombre = nombre._____()"]),
+          L(1, "if nombre == \"\":", "¿Está vacío?", "1 sangría.", ["Compara con \"\".", "if nombre == __:"]),
+          L(2, "return \"Otros\"", "Sin categoría: va a Otros.", "2 sangrías.", ["Un texto fijo.", "return \"_____\""]),
+          L(1, "for existente in datos[\"categorias\"]:", "Recorre las categorías que ya hay.", "1 sangría.", ["Un for sobre datos[\"categorias\"].", "for existente in ___________________:"]),
+          L(2, "if existente.lower() == nombre.lower():", "¿Es la misma sin importar mayúsculas?", "2 sangrías.", ["Las dos en minúsculas.", "if existente._____() == nombre.lower():"]),
+          L(3, "return existente", "Devuelve la que ya existía, con su forma original.", "3 sangrías.", ["Así no se duplica \"comida\" y \"Comida\".", "return _________"]),
+          L(1, "datos[\"categorias\"].append(nombre)", "Es nueva: agrégala.", "1 sangría.", ["append a la lista de categorías.", "datos[\"categorias\"].______(nombre)"]),
+          L(1, "return nombre", "Devuélvela.", "1 sangría.", ["return y la variable.", "return ______"])
+        ] },
+        { id: "g_crear_cuenta", name: "crear_cuenta", lines: [
+          F(0, "def crear_cuenta(datos, nombre, tipo, saldoinicial, limite=0, diacorte=1, diapago=1):"),
+          L(1, "cuenta = {", "Empieza el diccionario de la cuenta.", "1 sangría.", ["Variable, = y llave.", "cuenta = _"]),
+          L(2, "\"id\": uuid.uuid4().hex,", "Clave \"id\" con uuid.uuid4().hex.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"id\": ________________,"]),
+          L(2, "\"nombre\": nombre,", "Clave \"nombre\" con nombre.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"______\": nombre,"]),
+          L(2, "\"tipo\": tipo,", "Clave \"tipo\" con tipo.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"____\": tipo,"]),
+          L(2, "\"saldoinicial\": saldoinicial,", "Clave \"saldoinicial\" con saldoinicial.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"____________\": saldoinicial,"]),
+          L(2, "\"limite\": limite,", "Clave \"limite\" con limite.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"______\": limite,"]),
+          L(2, "\"diacorte\": diacorte,", "Clave \"diacorte\" con diacorte.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"________\": diacorte,"]),
+          L(2, "\"diapago\": diapago,", "Clave \"diapago\" con diapago.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"_______\": diapago,"]),
+          L(1, "}", "Cierra el diccionario.", "1 sangría.", ["La llave que cierra.", "_"]),
+          L(1, "datos[\"cuentas\"].append(cuenta)", "Agrégala a la lista de cuentas.", "1 sangría.", ["append.", "datos[\"cuentas\"].______(cuenta)"]),
+          L(1, "return cuenta", "Devuélvela.", "1 sangría.", ["return y la variable.", "return ______"])
+        ] },
+        { id: "g_buscar_cuenta", name: "buscar_cuenta", lines: [
+          F(0, "def buscar_cuenta(datos, cuentaid):"),
+          L(1, "for cuenta in datos[\"cuentas\"]:", "Recorre las cuentas.", "1 sangría.", ["for sobre datos[\"cuentas\"].", "for cuenta in ________________:"]),
+          L(2, "if cuenta[\"id\"] == cuentaid:", "¿Es la que buscas?", "2 sangrías.", ["Compara ids con ==.", "if cuenta[\"id\"] __ cuentaid:"]),
+          L(3, "return cuenta", "Devuélvela.", "3 sangrías.", ["return y la variable.", "return ______"]),
+          L(1, "return None", "No estaba.", "1 sangría.", ["None con mayúscula.", "return ____"])
+        ] },
+        { id: "g_borrar_cuenta", name: "borrar_cuenta", lines: [
+          F(0, "def borrar_cuenta(datos, cuentaid):"),
+          L(1, "cuenta = buscar_cuenta(datos, cuentaid)", "Búscala.", "1 sangría.", ["Tu buscar_cuenta.", "cuenta = _____________(datos, cuentaid)"]),
+          L(1, "if cuenta is None:", "¿No existe?", "1 sangría.", ["is None.", "if cuenta _______:"]),
+          L(2, "return False", "Avisa que no se pudo.", "2 sangrías.", ["False con mayúscula.", "return _____"]),
+          L(1, "datos[\"cuentas\"].remove(cuenta)", "Quítala de la lista.", "1 sangría.", ["remove quita un elemento igual al que le das (aquí sí tienes el diccionario).", "datos[\"cuentas\"].______(cuenta)"]),
+          L(1, "movimientos = []", "Lista nueva para los movimientos que se quedan.", "1 sangría.", ["Corchetes vacíos.", "movimientos = __"]),
+          L(1, "for mov in datos[\"movimientos\"]:", "Recorre los movimientos.", "1 sangría.", ["for sobre datos[\"movimientos\"].", "for mov in ____________________:"]),
+          L(2, "if mov[\"cuentaid\"] != cuentaid:", "¿Es de otra cuenta?", "2 sangrías.", ["!= es distinto.", "if mov[\"cuentaid\"] __ cuentaid:"]),
+          L(3, "movimientos.append(mov)", "Ese se queda.", "3 sangrías.", ["append a tu lista nueva.", "movimientos.______(mov)"]),
+          L(1, "datos[\"movimientos\"] = movimientos", "Reemplaza la lista vieja por la nueva.", "1 sangría.", ["Asignas a datos[\"movimientos\"].", "datos[\"___________\"] = movimientos"]),
+          L(1, "recurrentes = []", "Lo mismo para los pagos recurrentes.", "1 sangría.", ["Corchetes vacíos.", "recurrentes = __"]),
+          L(1, "for rec in datos[\"recurrentes\"]:", "Recorre los recurrentes.", "1 sangría.", ["for sobre datos[\"recurrentes\"].", "for rec in ____________________:"]),
+          L(2, "if rec[\"cuentaid\"] != cuentaid:", "¿Es de otra cuenta?", "2 sangrías.", ["!=.", "if rec[\"cuentaid\"] __ cuentaid:"]),
+          L(3, "recurrentes.append(rec)", "Ese se queda.", "3 sangrías.", ["append.", "recurrentes.______(rec)"]),
+          L(1, "datos[\"recurrentes\"] = recurrentes", "Reemplaza la lista.", "1 sangría.", ["Asignas.", "datos[\"___________\"] = recurrentes"]),
+          L(1, "return True", "Listo.", "1 sangría.", ["True con mayúscula.", "return ____"])
+        ] },
+        { id: "g_saldo", name: "saldo", lines: [
+          F(0, "def saldo(datos, cuenta):"),
+          L(1, "gastos = 0", "Empieza a sumar los gastos en 0.", "1 sangría.", ["Una variable en 0.", "gastos = _"]),
+          L(1, "abonos = 0", "Y los abonos (ingresos o pagos) en 0.", "1 sangría.", ["Igual.", "abonos = _"]),
+          L(1, "for mov in datos[\"movimientos\"]:", "Recorre los movimientos.", "1 sangría.", ["for sobre datos[\"movimientos\"].", "for mov in ____________________:"]),
+          L(2, "if mov[\"cuentaid\"] == cuenta[\"id\"]:", "¿Es de esta cuenta?", "2 sangrías.", ["Compara ids.", "if mov[\"cuentaid\"] __ cuenta[\"id\"]:"]),
+          L(3, "if mov[\"tipo\"] == \"gasto\":", "¿Es un gasto?", "3 sangrías.", ["Compara el tipo.", "if mov[\"tipo\"] == _______:"]),
+          L(4, "gastos += mov[\"monto\"]", "Súmalo a gastos.", "4 sangrías.", ["+= suma y guarda.", "gastos __ mov[\"monto\"]"]),
+          L(3, "else:", "Si no...", "3 sangrías.", ["Una palabra y dos puntos.", "____:"]),
+          L(4, "abonos += mov[\"monto\"]", "Súmalo a abonos.", "4 sangrías.", ["+=.", "abonos __ mov[\"monto\"]"]),
+          L(1, "if cuenta[\"tipo\"] == \"credito\":", "¿Es tarjeta de crédito?", "1 sangría.", ["Compara el tipo con \"credito\".", "if cuenta[\"tipo\"] == _________:"]),
+          L(2, "return round(cuenta[\"saldoinicial\"] + gastos - abonos, 2)", "En crédito el saldo es deuda: inicial + gastos − pagos.", "2 sangrías.", ["round(..., 2) deja dos decimales.", "return round(cuenta[\"saldoinicial\"] _________________, 2)"]),
+          L(1, "return round(cuenta[\"saldoinicial\"] - gastos + abonos, 2)", "En débito y efectivo es dinero: inicial − gastos + abonos.", "1 sangría.", ["Al revés que en crédito.", "return round(cuenta[\"saldoinicial\"] _________________, 2)"])
+        ] },
+        { id: "g_gastado_entre", name: "gastado_entre", lines: [
+          F(0, "def gastado_entre(datos, cuenta, inicio, fin):"),
+          L(1, "total = 0", "Empieza el total en 0.", "1 sangría.", ["Una variable en 0.", "total = _"]),
+          L(1, "for mov in datos[\"movimientos\"]:", "Recorre los movimientos.", "1 sangría.", ["for sobre datos[\"movimientos\"].", "for mov in ____________________:"]),
+          L(2, "if mov[\"cuentaid\"] == cuenta[\"id\"] and mov[\"tipo\"] == \"gasto\":", "¿Es un gasto de esta cuenta?", "2 sangrías.", ["Dos condiciones con and.", "if mov[\"cuentaid\"] == cuenta[\"id\"] ___ mov[\"tipo\"] == \"gasto\":"]),
+          L(3, "fecha = a_fecha(mov[\"fecha\"])", "Convierte su fecha de texto a fecha.", "3 sangrías.", ["Tu función a_fecha.", "fecha = _______(mov[\"fecha\"])"]),
+          L(3, "if inicio <= fecha <= fin:", "¿Cae entre inicio y fin?", "3 sangrías.", ["Python deja encadenar: a <= x <= b.", "if inicio ___________ fin:"]),
+          L(4, "total += mov[\"monto\"]", "Súmalo.", "4 sangrías.", ["+=.", "total __ mov[\"monto\"]"]),
+          L(1, "return round(total, 2)", "Devuelve el total con dos decimales.", "1 sangría.", ["round(total, 2).", "return _____(total, 2)"])
+        ] },
+        { id: "g_info_credito", name: "info_credito", lines: [
+          F(0, "def info_credito(datos, cuenta, hoy):"),
+          L(1, "ultimo_corte = ultima_fecha_con_dia(cuenta[\"diacorte\"], hoy - timedelta(days=1))", "El último corte que ya pasó (antes de hoy).", "1 sangría.", ["ultima_fecha_con_dia con el día de corte y ayer.", "ultimo_corte = ultima_fecha_con_dia(cuenta[\"diacorte\"], _______________________)"]),
+          L(1, "proximo_corte = proxima_fecha_con_dia(cuenta[\"diacorte\"], hoy)", "El próximo corte (hoy o después).", "1 sangría.", ["proxima_fecha_con_dia.", "proximo_corte = _____________________(cuenta[\"diacorte\"], hoy)"]),
+          L(1, "corte_anterior = sumar_meses(ultimo_corte, -1, cuenta[\"diacorte\"])", "El corte de un mes antes del último.", "1 sangría.", ["sumar_meses con -1.", "corte_anterior = sumar_meses(ultimo_corte, __, cuenta[\"diacorte\"])"]),
+          L(1, "pago = proxima_fecha_con_dia(cuenta[\"diapago\"], ultimo_corte + timedelta(days=1))", "La fecha de pago que sigue al último corte.", "1 sangría.", ["proxima_fecha_con_dia con el día de pago, desde el día después del corte.", "pago = proxima_fecha_con_dia(cuenta[_________], ultimo_corte + timedelta(days=1))"]),
+          L(1, "if pago < hoy:", "¿Ese pago ya pasó?", "1 sangría.", ["<.", "if pago _ hoy:"]),
+          L(2, "pago = proxima_fecha_con_dia(cuenta[\"diapago\"], proximo_corte + timedelta(days=1))", "Entonces el pago es el del próximo corte.", "2 sangrías.", ["Igual, desde el día después del próximo corte.", "pago = proxima_fecha_con_dia(cuenta[\"diapago\"], _____________ + timedelta(days=1))"]),
+          L(2, "facturado = gastado_entre(datos, cuenta, ultimo_corte + timedelta(days=1), proximo_corte)", "Lo que entra en ese pago: del día después del último corte al próximo.", "2 sangrías.", ["gastado_entre con esas dos fechas.", "facturado = gastado_entre(datos, cuenta, ultimo_corte + timedelta(days=1), _____________)"]),
+          L(1, "else:", "Si no...", "1 sangría.", ["Una palabra y dos puntos.", "____:"]),
+          L(2, "facturado = gastado_entre(datos, cuenta, corte_anterior + timedelta(days=1), ultimo_corte)", "Lo que entra en el pago pendiente: del corte anterior al último.", "2 sangrías.", ["gastado_entre con esas dos fechas.", "facturado = gastado_entre(datos, cuenta, __________________________________, ultimo_corte)"]),
+          L(1, "deuda = saldo(datos, cuenta)", "La deuda es el saldo de la tarjeta.", "1 sangría.", ["Tu función saldo.", "deuda = _____(datos, cuenta)"]),
+          L(1, "disponible = None", "Sin límite no hay disponible.", "1 sangría.", ["None.", "disponible = ____"]),
+          L(1, "if cuenta[\"limite\"] > 0:", "¿Tiene límite?", "1 sangría.", ["> 0.", "if cuenta[\"limite\"] ___:"]),
+          L(2, "disponible = round(cuenta[\"limite\"] - deuda, 2)", "Disponible = límite − deuda.", "2 sangrías.", ["round(..., 2).", "disponible = round(cuenta[\"limite\"] _______, 2)"]),
+          L(1, "return {", "Devuelve un diccionario con todo.", "1 sangría.", ["return y llave.", "return _"]),
+          L(2, "\"deuda\": deuda,", "Clave \"deuda\" con deuda.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"_____\": deuda,"]),
+          L(2, "\"disponible\": disponible,", "Clave \"disponible\" con disponible.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"__________\": disponible,"]),
+          L(2, "\"proximocorte\": proximo_corte,", "Clave \"proximocorte\" con proximo_corte.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"proximocorte\": _____________,"]),
+          L(2, "\"proximopago\": pago,", "Clave \"proximopago\" con pago.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"proximo____\": pago,"]),
+          L(2, "\"diaspago\": (pago - hoy).days,", "Clave \"diaspago\" con (pago - hoy).days.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"diaspago\": _________________,"]),
+          L(2, "\"gastoperiodo\": gastado_entre(datos, cuenta, ultimo_corte + timedelta(days=1), hoy),", "Clave \"gastoperiodo\" con gastado_entre(datos, cuenta, ultimo_corte + timedelta(days=1), hoy).", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"gastoperiodo\": ___________________________________________________________________,"]),
+          L(2, "\"facturado\": facturado,", "Clave \"facturado\" con facturado.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"_________\": facturado,"]),
+          L(1, "}", "Cierra el diccionario.", "1 sangría.", ["La llave que cierra.", "_"])
+        ] },
+        { id: "g_agregar_movimiento", name: "agregar_movimiento", lines: [
+          F(0, "def agregar_movimiento(datos, tipo, monto, cuentaid, fecha, descripcion=\"\", categoria=\"\", recurrenteid=None):"),
+          L(1, "if tipo == \"gasto\":", "¿Es gasto?", "1 sangría.", ["Compara tipo.", "if tipo == _______:"]),
+          L(2, "categoria = asegurar_categoria(datos, categoria)", "Usa (o crea) la categoría.", "2 sangrías.", ["Tu asegurar_categoria.", "categoria = __________________(datos, categoria)"]),
+          L(1, "else:", "Si no...", "1 sangría.", ["Una palabra y dos puntos.", "____:"]),
+          L(2, "categoria = \"\"", "Los abonos no llevan categoría.", "2 sangrías.", ["Texto vacío.", "categoria = __"]),
+          L(1, "mov = {", "Empieza el diccionario del movimiento.", "1 sangría.", ["Variable, = y llave.", "mov = _"]),
+          L(2, "\"id\": uuid.uuid4().hex,", "Clave \"id\" con uuid.uuid4().hex.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"id\": ________________,"]),
+          L(2, "\"tipo\": tipo,", "Clave \"tipo\" con tipo.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"____\": tipo,"]),
+          L(2, "\"fecha\": fecha.strftime(DIA),", "Clave \"fecha\" con fecha.strftime(DIA).", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"fecha\": ___________________,"]),
+          L(2, "\"descripcion\": descripcion,", "Clave \"descripcion\" con descripcion.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"___________\": descripcion,"]),
+          L(2, "\"monto\": round(float(monto), 2),", "Clave \"monto\" con round(float(monto), 2).", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"monto\": ______________________,"]),
+          L(2, "\"categoria\": categoria,", "Clave \"categoria\" con categoria.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"_________\": categoria,"]),
+          L(2, "\"cuentaid\": cuentaid,", "Clave \"cuentaid\" con cuentaid.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"________\": cuentaid,"]),
+          L(2, "\"recurrenteid\": recurrenteid,", "Clave \"recurrenteid\" con recurrenteid.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"____________\": recurrenteid,"]),
+          L(1, "}", "Cierra el diccionario.", "1 sangría.", ["La llave que cierra.", "_"]),
+          L(1, "datos[\"movimientos\"].append(mov)", "Agrégalo.", "1 sangría.", ["append.", "datos[\"movimientos\"].______(mov)"]),
+          L(1, "return mov", "Devuélvelo.", "1 sangría.", ["return y la variable.", "return ___"])
+        ] },
+        { id: "g_borrar_movimiento", name: "borrar_movimiento", lines: [
+          F(0, "def borrar_movimiento(datos, movid):"),
+          L(1, "for i, mov in enumerate(datos[\"movimientos\"]):", "Recorre con posición.", "1 sangría.", ["enumerate.", "for i, mov in _________(datos[\"movimientos\"]):"]),
+          L(2, "if mov[\"id\"] == movid:", "¿Es el que buscas?", "2 sangrías.", ["Compara ids.", "if mov[\"id\"] __ movid:"]),
+          L(3, "datos[\"movimientos\"].pop(i)", "Sácalo por su posición.", "3 sangrías.", ["pop(i).", "datos[\"movimientos\"].___(i)"]),
+          L(3, "return True", "Listo.", "3 sangrías.", ["True con mayúscula.", "return ____"]),
+          L(1, "return False", "Avisa que no se pudo.", "1 sangría.", ["False con mayúscula.", "return _____"])
+        ] },
+        { id: "g_fecha_de", name: "fecha_de", lines: [
+          F(0, "def fecha_de(mov):"),
+          L(1, "return mov[\"fecha\"]", "Devuelve su fecha (para ordenar).", "1 sangría.", ["La clave \"fecha\".", "return mov[_______]"])
+        ] },
+        { id: "g_filtrar", name: "filtrar", lines: [
+          F(0, "def filtrar(datos, desde=None, hasta=None, cuentaid=None, categoria=None, tipo=None, texto=\"\"):"),
+          L(1, "texto = texto.strip().lower()", "Limpia lo buscado.", "1 sangría.", ["Como en notas.py.", "texto = texto._____________()"]),
+          L(1, "resultado = []", "Lista vacía para los resultados.", "1 sangría.", ["Corchetes vacíos.", "resultado = __"]),
+          L(1, "for mov in datos[\"movimientos\"]:", "Recorre los movimientos.", "1 sangría.", ["for sobre datos[\"movimientos\"].", "for mov in ____________________:"]),
+          L(2, "fecha = a_fecha(mov[\"fecha\"])", "Convierte su fecha de texto a fecha.", "2 sangrías.", ["Tu función a_fecha.", "fecha = _______(mov[\"fecha\"])"]),
+          L(2, "if desde is not None and fecha < desde:", "¿Hay fecha desde y este es anterior?", "2 sangrías.", ["Dos condiciones con and.", "if desde _______________ fecha < desde:"]),
+          L(3, "continue", "Sáltalo: pasa al siguiente movimiento.", "3 sangrías.", ["continue salta al siguiente giro del for.", "________"]),
+          L(2, "if hasta is not None and fecha > hasta:", "¿Hay fecha hasta y este es posterior?", "2 sangrías.", ["Igual con >.", "if hasta is not None and fecha _ hasta:"]),
+          L(3, "continue", "Sáltalo: pasa al siguiente movimiento.", "3 sangrías.", ["continue salta al siguiente giro del for.", "________"]),
+          L(2, "if cuentaid is not None and mov[\"cuentaid\"] != cuentaid:", "¿Filtras por cuenta y es de otra?", "2 sangrías.", ["!=.", "if cuentaid is not None and mov[\"cuentaid\"] __ cuentaid:"]),
+          L(3, "continue", "Sáltalo: pasa al siguiente movimiento.", "3 sangrías.", ["continue salta al siguiente giro del for.", "________"]),
+          L(2, "if categoria is not None and mov[\"categoria\"] != categoria:", "¿Filtras por categoría y es otra?", "2 sangrías.", ["!=.", "if categoria is not None and mov[\"categoria\"] __ categoria:"]),
+          L(3, "continue", "Sáltalo: pasa al siguiente movimiento.", "3 sangrías.", ["continue salta al siguiente giro del for.", "________"]),
+          L(2, "if tipo is not None and mov[\"tipo\"] != tipo:", "¿Filtras por tipo y es otro?", "2 sangrías.", ["!=.", "if tipo is not None and mov[\"tipo\"] __ tipo:"]),
+          L(3, "continue", "Sáltalo: pasa al siguiente movimiento.", "3 sangrías.", ["continue salta al siguiente giro del for.", "________"]),
+          L(2, "if texto not in mov[\"descripcion\"].lower() and texto not in mov[\"categoria\"].lower():", "¿Lo buscado no está ni en la descripción ni en la categoría?", "2 sangrías.", ["Dos not in con and. Un texto vacío siempre está.", "if texto ______ mov[\"descripcion\"].lower() and texto not in mov[\"categoria\"].lower():"]),
+          L(3, "continue", "Sáltalo: pasa al siguiente movimiento.", "3 sangrías.", ["continue salta al siguiente giro del for.", "________"]),
+          L(2, "resultado.append(mov)", "Pasó todos los filtros: agrégalo.", "2 sangrías.", ["append.", "resultado.______(mov)"]),
+          L(1, "resultado.sort(key=fecha_de, reverse=True)", "Ordena por fecha, los más nuevos primero.", "1 sangría.", ["sort con key = la función que da la fecha, y reverse.", "resultado.sort(__________________________)"]),
+          L(1, "return resultado", "Devuélvelos.", "1 sangría.", ["return.", "return _________"])
+        ] },
+        { id: "g_total_de", name: "total_de", lines: [
+          F(0, "def total_de(fila):"),
+          L(1, "return fila[1]", "Devuelve el total de la fila (posición 1).", "1 sangría.", ["Las listas empiezan en 0.", "return fila___"])
+        ] },
+        { id: "g_resumen_por_categoria", name: "resumen_por_categoria", lines: [
+          F(0, "def resumen_por_categoria(datos, desde=None, hasta=None):"),
+          L(1, "totales = {}", "Diccionario vacío: categoría → total.", "1 sangría.", ["Llaves vacías.", "totales = __"]),
+          L(1, "for mov in filtrar(datos, desde, hasta, tipo=\"gasto\"):", "Recorre solo los gastos del periodo.", "1 sangría.", ["Usa tu filtrar con tipo=\"gasto\".", "for mov in filtrar(datos, desde, hasta, ____________):"]),
+          L(2, "if mov[\"categoria\"] not in totales:", "¿Esa categoría aún no está en totales?", "2 sangrías.", ["not in con un diccionario pregunta por sus claves.", "if mov[\"categoria\"] ______ totales:"]),
+          L(3, "totales[mov[\"categoria\"]] = 0", "Empiézala en 0.", "3 sangrías.", ["Asignas con la categoría como clave.", "totales[mov[\"categoria\"]] ___"]),
+          L(2, "totales[mov[\"categoria\"]] += mov[\"monto\"]", "Suma el monto a su categoría.", "2 sangrías.", ["+=.", "totales[mov[\"categoria\"]] __ mov[\"monto\"]"]),
+          L(1, "filas = []", "Lista para las filas [categoría, total].", "1 sangría.", ["Corchetes vacíos.", "filas = __"]),
+          L(1, "for categoria in totales:", "Recorre las categorías del diccionario.", "1 sangría.", ["Recorrer un diccionario da sus claves.", "for categoria in _______:"]),
+          L(2, "filas.append([categoria, round(totales[categoria], 2)])", "Agrega la fila [categoría, total].", "2 sangrías.", ["Una lista de dos cosas.", "filas.append([categoria, ____________________________])"]),
+          L(1, "filas.sort(key=total_de, reverse=True)", "Ordena de mayor a menor gasto.", "1 sangría.", ["sort con key=total_de.", "filas.sort(key=________, reverse=True)"]),
+          L(1, "return filas", "Devuélvelas.", "1 sangría.", ["return.", "return _____"])
+        ] },
+        { id: "g_avanzar_fecha", name: "avanzar_fecha", lines: [
+          F(0, "def avanzar_fecha(fecha, frecuencia, diabase):"),
+          L(1, "if frecuencia == \"semanal\":", "¿Es semanal?", "1 sangría.", ["Compara con ==.", "if frecuencia == _________:"]),
+          L(2, "return fecha + timedelta(days=7)", "Suma 7 días.", "2 sangrías.", ["timedelta(days=...).", "return fecha + timedelta(days=_)"]),
+          L(1, "if frecuencia == \"quincenal\":", "¿Quincenal?", "1 sangría.", ["==.", "if frecuencia == ___________:"]),
+          L(2, "return fecha + timedelta(days=14)", "Suma 14 días.", "2 sangrías.", ["timedelta.", "return fecha + timedelta(days=__)"]),
+          L(1, "if frecuencia == \"bimestral\":", "¿Bimestral?", "1 sangría.", ["==.", "if frecuencia == ___________:"]),
+          L(2, "return sumar_meses(fecha, 2, diabase)", "Suma 2 meses.", "2 sangrías.", ["sumar_meses.", "return sumar_meses(fecha, _, diabase)"]),
+          L(1, "if frecuencia == \"anual\":", "¿Anual?", "1 sangría.", ["==.", "if frecuencia == _______:"]),
+          L(2, "return sumar_meses(fecha, 12, diabase)", "Suma 12 meses.", "2 sangrías.", ["sumar_meses.", "return sumar_meses(fecha, __, diabase)"]),
+          L(1, "return sumar_meses(fecha, 1, diabase)", "Si no es ninguna, es mensual: 1 mes.", "1 sangría.", ["sumar_meses.", "return sumar_meses(fecha, _, diabase)"])
+        ] },
+        { id: "g_crear_recurrente", name: "crear_recurrente", lines: [
+          F(0, "def crear_recurrente(datos, nombre, monto, cuentaid, frecuencia, proximafecha, categoria=\"\", automatico=False):"),
+          L(1, "rec = {", "Empieza el diccionario del pago recurrente.", "1 sangría.", ["Variable, = y llave.", "rec = _"]),
+          L(2, "\"id\": uuid.uuid4().hex,", "Clave \"id\" con uuid.uuid4().hex.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"id\": ________________,"]),
+          L(2, "\"nombre\": nombre,", "Clave \"nombre\" con nombre.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"______\": nombre,"]),
+          L(2, "\"monto\": monto,", "Clave \"monto\" con monto.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"_____\": monto,"]),
+          L(2, "\"cuentaid\": cuentaid,", "Clave \"cuentaid\" con cuentaid.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"________\": cuentaid,"]),
+          L(2, "\"frecuencia\": frecuencia,", "Clave \"frecuencia\" con frecuencia.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"__________\": frecuencia,"]),
+          L(2, "\"proximafecha\": proximafecha.strftime(DIA),", "Clave \"proximafecha\" con proximafecha.strftime(DIA).", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"proximafecha\": __________________________,"]),
+          L(2, "\"diabase\": proximafecha.day,", "Clave \"diabase\" con proximafecha.day.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"diabase\": ________________,"]),
+          L(2, "\"categoria\": asegurar_categoria(datos, categoria),", "Clave \"categoria\" con asegurar_categoria(datos, categoria).", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"categoria\": ____________________________________,"]),
+          L(2, "\"automatico\": automatico,", "Clave \"automatico\" con automatico.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"__________\": automatico,"]),
+          L(2, "\"activo\": True,", "Clave \"activo\" con True.", "2 sangrías.", ["\"clave\": valor, — como en tus otros diccionarios.", "\"activo\": ____,"]),
+          L(1, "}", "Cierra el diccionario.", "1 sangría.", ["La llave que cierra.", "_"]),
+          L(1, "datos[\"recurrentes\"].append(rec)", "Agrégalo.", "1 sangría.", ["append.", "datos[\"recurrentes\"].______(rec)"]),
+          L(1, "return rec", "Devuélvelo.", "1 sangría.", ["return.", "return ___"])
+        ] },
+        { id: "g_borrar_recurrente", name: "borrar_recurrente", lines: [
+          F(0, "def borrar_recurrente(datos, recid):"),
+          L(1, "for i, rec in enumerate(datos[\"recurrentes\"]):", "Recorre los recurrentes con posición.", "1 sangría.", ["enumerate.", "for i, rec in _________(datos[\"recurrentes\"]):"]),
+          L(2, "if rec[\"id\"] == recid:", "¿Es el que buscas?", "2 sangrías.", ["Compara ids.", "if rec[\"id\"] __ recid:"]),
+          L(3, "datos[\"recurrentes\"].pop(i)", "Sácalo por su posición.", "3 sangrías.", ["pop(i).", "datos[\"recurrentes\"].___(i)"]),
+          L(3, "return True", "Listo.", "3 sangrías.", ["True con mayúscula.", "return ____"]),
+          L(1, "return False", "Avisa que no se pudo.", "1 sangría.", ["False con mayúscula.", "return _____"])
+        ] },
+        { id: "g_alternar_recurrente", name: "alternar_recurrente", lines: [
+          F(0, "def alternar_recurrente(rec):"),
+          L(1, "rec[\"activo\"] = not rec[\"activo\"]", "Pausa o reactiva: lo contrario de lo que tiene.", "1 sangría.", ["not invierte True ↔ False.", "rec[\"activo\"] = ___ rec[\"activo\"]"])
+        ] },
+        { id: "g_registrar_recurrente", name: "registrar_recurrente", lines: [
+          F(0, "def registrar_recurrente(datos, rec, fecha):"),
+          L(1, "mov = agregar_movimiento(datos, \"gasto\", rec[\"monto\"], rec[\"cuentaid\"], fecha, rec[\"nombre\"], rec[\"categoria\"], rec[\"id\"])", "Registra el gasto con los datos del recurrente.", "1 sangría.", ["agregar_movimiento con tipo, monto, cuenta, fecha, descripción, categoría y el id del recurrente.", "mov = agregar_movimiento(datos, \"gasto\", _____________________________, fecha, rec[\"nombre\"], rec[\"categoria\"], rec[\"id\"])"]),
+          L(1, "siguiente = avanzar_fecha(a_fecha(rec[\"proximafecha\"]), rec[\"frecuencia\"], rec[\"diabase\"])", "Calcula su siguiente fecha.", "1 sangría.", ["avanzar_fecha con la próxima fecha (como fecha), la frecuencia y el día base.", "siguiente = _____________(a_fecha(rec[\"proximafecha\"]), rec[\"frecuencia\"], rec[\"diabase\"])"]),
+          L(1, "rec[\"proximafecha\"] = siguiente.strftime(DIA)", "Guárdala como texto.", "1 sangría.", ["strftime con DIA.", "rec[\"proximafecha\"] = siguiente.________(DIA)"]),
+          L(1, "return mov", "Devuélvelo.", "1 sangría.", ["return y la variable.", "return ___"])
+        ] },
+        { id: "g_procesar_automaticos", name: "procesar_automaticos", lines: [
+          F(0, "def procesar_automaticos(datos, hoy):"),
+          L(1, "creados = []", "Lista de los movimientos que se crean.", "1 sangría.", ["Corchetes vacíos.", "creados = __"]),
+          L(1, "for rec in datos[\"recurrentes\"]:", "Recorre los recurrentes.", "1 sangría.", ["for sobre datos[\"recurrentes\"].", "for rec in ____________________:"]),
+          L(2, "if rec[\"activo\"] and rec[\"automatico\"]:", "¿Está activo y es automático?", "2 sangrías.", ["and.", "if rec[\"activo\"] ___ rec[\"automatico\"]:"]),
+          L(3, "vueltas = 0", "Contador de seguridad.", "3 sangrías.", ["Una variable en 0.", "vueltas = _"]),
+          L(3, "while a_fecha(rec[\"proximafecha\"]) <= hoy and vueltas < 60:", "Mientras su fecha ya haya llegado (y no más de 60 veces)...", "3 sangrías.", ["while repite mientras la condición sea True.", "_____ a_fecha(rec[\"proximafecha\"]) <= hoy and vueltas < 60:"]),
+          L(4, "creados.append(registrar_recurrente(datos, rec, a_fecha(rec[\"proximafecha\"])))", "Regístralo en su fecha y guárdalo en creados.", "4 sangrías.", ["append del resultado de registrar_recurrente.", "creados.append(____________________(datos, rec, a_fecha(rec[\"proximafecha\"])))"]),
+          L(4, "vueltas += 1", "Suma una vuelta.", "4 sangrías.", ["+= 1.", "vueltas ____"]),
+          L(1, "return creados", "Devuélvelos.", "1 sangría.", ["return.", "return _______"])
+        ] },
+        { id: "g_fecha_de_pago", name: "fecha_de_pago", lines: [
+          F(0, "def fecha_de_pago(pago):"),
+          L(1, "return pago[0]", "Devuelve la fecha del pago (posición 0).", "1 sangría.", ["[0].", "return pago___"])
+        ] },
+        { id: "g_proximos_pagos", name: "proximos_pagos", lines: [
+          F(0, "def proximos_pagos(datos, hoy, dias=7):"),
+          L(1, "lista = []", "Lista de próximos pagos.", "1 sangría.", ["Corchetes vacíos.", "lista = __"]),
+          L(1, "for rec in datos[\"recurrentes\"]:", "Recorre los recurrentes.", "1 sangría.", ["for sobre datos[\"recurrentes\"].", "for rec in ____________________:"]),
+          L(2, "fecha = a_fecha(rec[\"proximafecha\"])", "Su próxima fecha como fecha.", "2 sangrías.", ["a_fecha.", "fecha = _______(rec[\"proximafecha\"])"]),
+          L(2, "if rec[\"activo\"] and (fecha - hoy).days <= dias:", "¿Activo y faltan pocos días (o ya pasó)?", "2 sangrías.", ["Restar fechas da una duración; .days son los días.", "if rec[\"activo\"] and (fecha - hoy)_____________:"]),
+          L(3, "lista.append([fecha, rec[\"nombre\"], rec[\"monto\"]])", "Agrégalo como [fecha, nombre, monto].", "3 sangrías.", ["Una lista de tres.", "lista.append([fecha, ___________________________])"]),
+          L(1, "for cuenta in datos[\"cuentas\"]:", "Recorre las cuentas.", "1 sangría.", ["for sobre datos[\"cuentas\"].", "for cuenta in ________________:"]),
+          L(2, "if cuenta[\"tipo\"] == \"credito\":", "¿Es tarjeta de crédito?", "2 sangrías.", ["Compara el tipo con \"credito\".", "if cuenta[\"tipo\"] == _________:"]),
+          L(3, "info = info_credito(datos, cuenta, hoy)", "Calcula su información de crédito.", "3 sangrías.", ["Tu info_credito.", "info = ____________(datos, cuenta, hoy)"]),
+          L(3, "if info[\"diaspago\"] <= dias and info[\"deuda\"] > 0:", "¿El pago está cerca y hay deuda?", "3 sangrías.", ["and.", "if info[\"diaspago\"] <= dias ___ info[\"deuda\"] > 0:"]),
+          L(4, "lista.append([info[\"proximopago\"], \"Pago tarjeta \" + cuenta[\"nombre\"], info[\"deuda\"]])", "Agrega el pago de la tarjeta.", "4 sangrías.", ["El nombre se arma uniendo textos con +.", "lista.append([info[\"proximopago\"], __________________________________, info[\"deuda\"]])"]),
+          L(1, "lista.sort(key=fecha_de_pago)", "Ordénalos por fecha.", "1 sangría.", ["sort con key.", "lista.sort(key=_____________)"]),
+          L(1, "return lista", "Devuélvelos.", "1 sangría.", ["return.", "return _____"])
+        ] }
+      ],
+      tests: ["if __name__ == \"__main__\":", "    hoy = date(2026, 11, 5)", "    datos = {\"cuentas\": [], \"movimientos\": [], \"recurrentes\": [], \"categorias\": list(CATEGORIAS_BASE)}", "    deb = crear_cuenta(datos, \"Débito\", \"debito\", 1000)", "    tdc = crear_cuenta(datos, \"Tarjeta\", \"credito\", 0, 5000, 20, 10)", "    agregar_movimiento(datos, \"gasto\", 150, deb[\"id\"], date(2026, 11, 1), \"Tacos\", \"comida\")", "    agregar_movimiento(datos, \"abono\", 500, deb[\"id\"], date(2026, 11, 2), \"Pago de trabajo\")", "    agregar_movimiento(datos, \"gasto\", 800, tdc[\"id\"], date(2026, 10, 18), \"Tenis\", \"Ropa\")", "    agregar_movimiento(datos, \"gasto\", 200, tdc[\"id\"], date(2026, 10, 25), \"Cine\", \"Entretenimiento\")", "    print(saldo(datos, deb))", "    print(saldo(datos, tdc))", "    info = info_credito(datos, tdc, hoy)", "    print(info[\"facturado\"], info[\"gastoperiodo\"], info[\"proximopago\"])", "    print(resumen_por_categoria(datos))", "    rec = crear_recurrente(datos, \"Netflix\", 199, tdc[\"id\"], \"mensual\", date(2026, 10, 3), \"suscripciones\", True)", "    creados = procesar_automaticos(datos, hoy)", "    print(len(creados), rec[\"proximafecha\"])", "    print(saldo(datos, tdc))", "    print([pago[1] for pago in proximos_pagos(datos, hoy)])", "    print(len(filtrar(datos, texto=\"netflix\")))", "    print(borrar_cuenta(datos, deb[\"id\"]), len(datos[\"movimientos\"]))", ""],
+      check: {
+        how: "Ejecuta las pruebas de gastos.py (usan el 5 de noviembre de 2026 como hoy, para que siempre den lo mismo).",
+        out: "1350.0\n1000.0\n800.0 200.0 2026-11-10\n[['Ropa', 800.0], ['Entretenimiento', 200.0], ['Comida', 150.0]]\n2 2026-12-03\n1398.0\n['Pago tarjeta Tarjeta']\n2\nTrue 4",
+        note: "Cosas nuevas aquí: continue, while, not in con diccionarios, sort con key y fechas con timedelta. Lee la Idea de la pista cuando aparezcan."
+      }
+    }
+  ];
+
+
+  // ---------- Estado (misma llave que antes: se conserva tu avance) ----------
+  var KEY = "ruta-escribe-v1";
+  var store = { solved: {}, pos: {}, file: 0, prob: {}, ans: {} };
+  try { var raw = JSON.parse(localStorage.getItem(KEY) || "null"); if (raw) store = Object.assign(store, raw); } catch (e) {}
+  ["solved", "pos", "prob", "ans"].forEach(function (k) { if (!store[k]) store[k] = {}; });
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var fileIdx = Math.min(store.file || 0, FILES.length - 1);
+  var probIdx = 0, hintLevel = 0, awaitingIndent = false, lastDone = null, reviewing = false;
+
+  // ---------- Comparar ----------
+  var WORD = /[\p{L}\p{N}_]/u;
+  function norm(s) {
+    s = String(s).replace(/[“”«»″]/g, '"').replace(/[‘’`´′]/g, "'").replace(/'/g, '"');
+    s = s.replace(/ /g, " ").replace(/\s+/g, " ").trim();
+    var out = "";
+    for (var i = 0; i < s.length; i++) {
+      var ch = s[i];
+      if (ch === " ") { var a = out[out.length - 1] || "", b = s[i + 1] || ""; if (WORD.test(a) && WORD.test(b)) out += " "; }
+      else out += ch;
+    }
+    return out.replace(/,$/, "");
+  }
+  function clean(s) { return String(s).replace(/[“”«»″]/g, '"').replace(/[‘’′]/g, "'").replace(/ /g, " ").trim(); }
+  function count(s, c) { return s.split(c).length - 1; }
+  function judge(line, typed) {
+    var t = norm(typed);
+    if (!t) return { ok: false, msg: "Escribe la línea primero." };
+    if (t === norm(line.code)) return { ok: true, msg: "Correcto." };
+    if (line.re && new RegExp(line.re).test(t)) return { ok: true, msg: "Correcto." };
+    for (var i = 0; i < line.alt.length; i++) if (t === norm(line.alt[i][0])) return { ok: true, msg: line.alt[i][1] };
+    for (var j = 0; j < line.warn.length; j++) if (t === norm(line.warn[j][0])) return { ok: false, msg: line.warn[j][1] };
+    var c = norm(line.code);
+    if (t.toLowerCase() === c.toLowerCase()) return { ok: false, msg: "Casi: revisa las mayúsculas. Python distingue True de true y None de none." };
+    if (c.slice(-1) === ":" && (t + ":") === c) return { ok: false, msg: "Te faltan los dos puntos al final: esta línea abre un bloque." };
+    if (count(t, "(") !== count(t, ")")) return { ok: false, msg: "Revisa los paréntesis: abriste " + count(t, "(") + " y cerraste " + count(t, ")") + "." };
+    if (count(t, "[") !== count(t, "]")) return { ok: false, msg: "Revisa los corchetes: no cierran." };
+    if (count(t, '"') % 2) return { ok: false, msg: "Revisa las comillas: hay una sin cerrar." };
+    if (/==/.test(c) && !/==/.test(t) && /=/.test(t)) return { ok: false, msg: "Para comparar se usan dos signos: ==. Con uno solo asignas." };
+    return { ok: false, msg: "Todavía no coincide. Revisa qué tiene que hacer la línea, o usa la pista." };
+  }
+
+  // ---------- Ayudantes ----------
+  function pstate(p) { var s = store.pos[p.id]; if (!s) s = store.pos[p.id] = { step: 0, flags: {} }; if (!s.flags) s.flags = {}; return s; }
+  function matches(l, fl) { if (!l.when) return true; for (var k in l.when) if (fl[k] !== l.when[k]) return false; return true; }
+  function visible(p, fl) { return p.lines.filter(function (l) { return matches(l, fl); }); }
+  function steps(p, fl) { return visible(p, fl).filter(function (l) { return !l.fixed; }); }
+  function pad(n) { return new Array(n * 4 + 1).join(" "); }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function codeHTML(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/`([^`]+)`/g, "<code>$1</code>"); }
+  function file() { return FILES[fileIdx]; }
+  function problem() { return file().problems[probIdx]; }
+  function isDefProb(p) { return p.lines.some(function (l) { return l.fixed && /^def /.test(l.code); }); }
+  function defLine(p) { var d = null; p.lines.forEach(function (l) { if (!d && l.fixed && /^def /.test(l.code)) d = l.code; }); return d; }
+  function solvedIn(f) { return f.problems.filter(function (p) { return store.solved[p.id]; }).length; }
+  function findProb(id) { var r = null; FILES.forEach(function (f) { f.problems.forEach(function (p) { if (p.id === id) r = p; }); }); return r; }
+  function typedFor(p, idx, l) {
+    var a = (store.ans[p.id] || {})[idx]; var t = a != null ? a : l.code;
+    if (/,$/.test(l.code) && !/,$/.test(t)) t += ",";
+    return t;
+  }
+
+  // Líneas de código de una función ya terminada (o hasta donde vas)
+  function codeLines(p, upTo) {
+    var st = pstate(p), out = [], k = 0;
+    visible(p, st.flags).forEach(function (l) {
+      if (l.fixed) {
+        if (l.copyFrom) { var src = findProb(l.copyFrom); if (src && store.solved[src.id]) { codeLines(src).forEach(function (x) { out.push(x); }); return; } }
+        out.push({ lvl: l.lvl, text: l.code }); return;
+      }
+      var idx = k++;
+      if (upTo != null && idx >= upTo) return;
+      if (l.decision) return;
+      out.push({ lvl: l.lvl, text: typedFor(p, idx, l) });
+    });
+    return out;
+  }
+
+  // ---------- Dibujar ----------
+  function drawTop() {
+    var total = 0, done = 0;
+    FILES.forEach(function (f) { total += f.problems.length; done += solvedIn(f); });
+    $("count").textContent = done + " / " + total + " funciones";
+    $("bar").style.width = (total ? done / total * 100 : 0) + "%";
+    var tabs = $("tabs"); tabs.innerHTML = "";
+    FILES.forEach(function (f, i) {
+      var b = el("button", "tab"); b.type = "button"; b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", i === fileIdx ? "true" : "false");
+      b.appendChild(document.createTextNode(f.name));
+      b.appendChild(el("small", null, solvedIn(f) + "/" + f.problems.length));
+      b.addEventListener("click", function () { openFile(i); });
+      tabs.appendChild(b);
+    });
+  }
+
+  function drawMethods() {
+    var f = file(), box = $("methods"); box.innerHTML = "";
+    $("about").textContent = f.about;
+    f.problems.forEach(function (p, i) {
+      var b = el("button", "m" + (store.solved[p.id] ? " solved" : ""), p.name); b.type = "button";
+      b.setAttribute("aria-current", i === probIdx ? "true" : "false");
+      b.addEventListener("click", function () { goTo(i); });
+      box.appendChild(b);
+    });
+    $("fname").textContent = f.name;
+    $("fstat").textContent = solvedIn(f) + " de " + f.problems.length + " funciones";
+    $("check-how").textContent = f.check.how;
+    $("check-out").textContent = f.check.out;
+    $("check-note").textContent = f.check.note || ""; $("check-note").hidden = !f.check.note;
+  }
+
+  function drawFile() {
+    var f = file(), rows = $("rows"); rows.innerHTML = "";
+    var n = 0, nowRow = null;
+    function row(cls, text, lvl) {
+      var r = el("div", "r " + cls); n++;
+      r.appendChild(el("span", "n", String(n)));
+      r.appendChild(el("span", "t", pad(lvl || 0) + text));
+      rows.appendChild(r); return r;
+    }
+    function label(p, i, cur) {
+      var r = el("div", "r label" + (cur ? " cur" : ""));
+      r.appendChild(el("span", "n", ""));
+      r.appendChild(el("span", "t", "# " + (store.solved[p.id] ? "✓ " : cur ? "▶ " : "") + p.name));
+      rows.appendChild(r);
+    }
+    f.problems.forEach(function (p, i) {
+      var cur = i === probIdx, st = pstate(p), list = steps(p, st.flags);
+      label(p, i, cur);
+      if (cur && !store.solved[p.id]) {
+        var k = 0;
+        visible(p, st.flags).forEach(function (l) {
+          if (l.fixed) {
+            if (l.copyFrom) { var src = findProb(l.copyFrom); if (src && store.solved[src.id]) { codeLines(src).forEach(function (x) { row("done", x.text, x.lvl); }); return; } }
+            row("done", l.code, l.lvl); return;
+          }
+          var idx = k++;
+          if (l.decision) { if (idx === st.step) nowRow = row("now", "◆ tu decisión", l.lvl); return; }
+          if (idx < st.step) row("done" + (lastDone === p.id + ":" + idx ? " new" : ""), typedFor(p, idx, l), l.lvl);
+          else if (idx === st.step) nowRow = row("now", l.placement && awaitingIndent ? "? " + typedFor(p, idx, l) + "   ← ¿cuántas sangrías?" : "▶ ___", l.placement ? 0 : l.lvl);
+          else if (!l.placement) row("todo", "· · ·", l.lvl);
+        });
+      } else if (store.solved[p.id]) {
+        codeLines(p).forEach(function (x) { row("done" + (lastDone === p.id + ":end" ? " new" : ""), x.text, x.lvl); });
+      } else {
+        var d = defLine(p); if (d) row("done", d, 0);
+        var left = list.length - st.step;
+        var s = row("sum", "· faltan " + left + (left === 1 ? " línea" : " líneas") + " — toca para escribir", d ? 1 : 0);
+        s.tabIndex = 0; s.setAttribute("role", "button");
+        s.addEventListener("click", function () { goTo(i); });
+        s.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goTo(i); } });
+      }
+      if (i < f.problems.length - 1) { rows.appendChild(el("div", "r blank")); if (isDefProb(p) || isDefProb(f.problems[i + 1])) rows.appendChild(el("div", "r blank")); }
+    });
+    if (nowRow) {
+      try { nowRow.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); } catch (e) {}
+    }
+  }
+
+  function nextUnsolved() {
+    var f = file();
+    for (var i = probIdx + 1; i < f.problems.length; i++) if (!store.solved[f.problems[i].id]) return i;
+    for (var j = 0; j < probIdx; j++) if (!store.solved[f.problems[j].id]) return j;
+    return -1;
+  }
+
+  function drawBox() {
+    var box = $("box"); box.innerHTML = "";
+    var p = problem(), st = pstate(p), list = steps(p, st.flags);
+    if (store.solved[p.id] && !reviewing) {
+      var nu = nextUnsolved();
+      if (nu > -1) { probIdx = nu; return render(); }
+      box.appendChild(el("p", "ask", "Terminaste " + file().name + " ✓"));
+      box.appendChild(el("p", "where", "Cópialo, ejecútalo y compara con Comprueba. Luego pégalo en el chat con Claude."));
+      var r = el("div", "row");
+      var cp = el("button", "btn primary", "Copiar archivo"); cp.type = "button"; cp.addEventListener("click", copyFile); r.appendChild(cp);
+      if (fileIdx < FILES.length - 1) { var nf = el("button", "btn", "Siguiente: " + FILES[fileIdx + 1].name); nf.type = "button"; nf.addEventListener("click", function () { openFile(fileIdx + 1); }); r.appendChild(nf); }
+      box.appendChild(r); return;
+    }
+    if (reviewing) {
+      box.appendChild(el("p", "ask", p.name + " ya está escrita."));
+      var r2 = el("div", "row");
+      var redo = el("button", "btn", "Rehacerla"); redo.type = "button";
+      redo.addEventListener("click", function () { store.pos[p.id] = { step: 0, flags: {} }; delete store.ans[p.id]; delete store.solved[p.id]; reviewing = false; save(); render(); });
+      var go = el("button", "btn primary", "Seguir con lo pendiente"); go.type = "button";
+      go.addEventListener("click", function () { reviewing = false; render(); });
+      r2.appendChild(go); r2.appendChild(redo); box.appendChild(r2); return;
+    }
+
+    var l = list[st.step];
+    var head = el("div", "where-am-i");
+    head.appendChild(el("span", null, p.name)); head.appendChild(el("span", null, "línea " + (st.step + 1) + " de " + list.length));
+    box.appendChild(head);
+
+    if (l.decision) {
+      var a = el("p", "ask", l.ask); a.appendChild(el("span", "pill", "tu decisión")); box.appendChild(a);
+      var opts = el("div", "opts");
+      l.opts.forEach(function (o) {
+        var b = el("button", "opt", o.t); b.type = "button";
+        b.addEventListener("click", function () {
+          for (var k in o.set) st.flags[k] = o.set[k];
+          Array.prototype.forEach.call(opts.children, function (c) { c.disabled = true; });
+          var fb = el("p", "fb good", "Elegiste: " + o.t + ". " + o.why); box.appendChild(fb);
+          var go2 = el("button", "btn primary", "Seguir →"); go2.type = "button"; go2.addEventListener("click", advance);
+          box.appendChild(go2); go2.focus();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); return;
+    }
+
+    box.appendChild(el("p", "ask", awaitingIndent ? "¿Con cuántas sangrías va esta línea?" : l.ask));
+    var w = el("p", "where"); w.innerHTML = "<strong>Dónde:</strong> " + codeHTML(l.where); box.appendChild(w);
+    var inrow = el("div", "inrow");
+    var input = el("input", "in" + (awaitingIndent ? " short" : ""));
+    input.id = "in-" + p.id + "-" + st.step + (awaitingIndent ? "-i" : ""); input.type = "text";
+    ["autocomplete", "autocorrect", "autocapitalize"].forEach(function (k) { input.setAttribute(k, "off"); });
+    input.setAttribute("spellcheck", "false"); input.setAttribute("enterkeyhint", "done");
+    input.setAttribute("aria-label", awaitingIndent ? "Número de sangrías" : "Escribe la línea");
+    input.placeholder = awaitingIndent ? "0, 1, 2…" : "escribe la línea";
+    if (awaitingIndent) input.setAttribute("inputmode", "numeric");
+    var check = el("button", "btn primary", "Comprobar"); check.type = "button";
+    inrow.appendChild(input); inrow.appendChild(check); box.appendChild(inrow);
+    var tools = el("div", "row");
+    var hint = el("button", "btn hint small", "Pista"); hint.type = "button";
+    if (!awaitingIndent) tools.appendChild(hint);
+    box.appendChild(tools);
+    var fbk = el("p", "fb"); fbk.hidden = true; box.appendChild(fbk);
+    var hb = el("div", "hintbox"); hb.hidden = true; box.appendChild(hb);
+
+    function showHints() {
+      hb.hidden = hintLevel === 0; hb.innerHTML = "";
+      if (hintLevel >= 1) hb.appendChild(el("span", null, "Idea: " + l.hints[0]));
+      if (hintLevel >= 2) { var s2 = el("span"); s2.innerHTML = "Forma: <code>" + codeHTML(l.hints[1]) + "</code>"; hb.appendChild(s2); }
+      if (hintLevel >= 3) { var s3 = el("span"); s3.innerHTML = "La línea: <code>" + codeHTML(l.code) + "</code> — escríbela tú para seguir."; hb.appendChild(s3); }
+      hint.textContent = hintLevel === 0 ? "Pista" : hintLevel === 1 ? "Otra pista" : "Ver la línea";
+      hint.disabled = hintLevel >= 3;
+    }
+    showHints();
+    hint.addEventListener("click", function () { if (hintLevel < 3) hintLevel++; showHints(); input.focus({ preventScroll: true }); });
+
+    function submit() {
+      fbk.hidden = false;
+      if (awaitingIndent) {
+        var num = parseInt(input.value, 10);
+        if (isNaN(num)) { fbk.className = "fb bad"; fbk.textContent = "Escribe un número: 0, 1, 2…"; return; }
+        if (num === l.lvl) { fbk.className = "fb good"; fbk.textContent = "Correcto."; setTimeout(advance, 350); return; }
+        fbk.className = "fb bad";
+        fbk.textContent = num > l.lvl ? "Muy adentro: con " + num + " quedaría dentro del bloque de arriba." : "Muy afuera: con " + num + " quedaría fuera del bloque donde tiene que estar.";
+        return;
+      }
+      var r = judge(l, input.value);
+      fbk.className = "fb " + (r.ok ? "good" : "bad"); fbk.textContent = r.msg;
+      if (r.ok) {
+        if (!store.ans[p.id]) store.ans[p.id] = {};
+        store.ans[p.id][st.step] = clean(input.value); save();
+        if (l.placement) { awaitingIndent = true; setTimeout(render, 350); }
+        else setTimeout(advance, 350);
+      }
+    }
+    check.addEventListener("click", submit);
+    input.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); submit(); } });
+    setTimeout(function () { try { input.focus({ preventScroll: true }); } catch (e) {} }, 0);
+  }
+
+  function advance() {
+    var p = problem(), st = pstate(p);
+    lastDone = p.id + ":" + st.step;
+    st.step++; hintLevel = 0; awaitingIndent = false;
+    if (st.step >= steps(p, st.flags).length) { store.solved[p.id] = true; lastDone = p.id + ":end"; }
+    save(); render();
+  }
+
+  function render() {
+    store.file = fileIdx; store.prob[file().key] = probIdx; save();
+    $("copy-msg").hidden = true;
+    drawTop(); drawMethods(); drawFile(); drawBox();
+  }
+  function goTo(i) {
+    probIdx = i; hintLevel = 0; awaitingIndent = false; lastDone = null;
+    reviewing = !!store.solved[problem().id];
+    render();
+  }
+  function openFile(i) {
+    fileIdx = i; var f = file(), pi = store.prob[f.key];
+    if (pi == null || store.solved[f.problems[pi] && f.problems[pi].id]) {
+      pi = f.problems.findIndex(function (p) { return !store.solved[p.id]; }); if (pi < 0) pi = 0;
+    }
+    probIdx = pi; hintLevel = 0; awaitingIndent = false; lastDone = null; reviewing = false;
+    render(); window.scrollTo(0, 0);
+  }
+
+  // ---------- Copiar el archivo armado con tus respuestas ----------
+  function buildFile(f, withTests) {
+    var out = ["# " + f.name, "# Escrito por ti con la Ruta de notas.py", ""];
+    f.problems.forEach(function (p, i) {
+      if (store.solved[p.id]) {
+        codeLines(p).forEach(function (x) { out.push(pad(x.lvl) + x.text); });
+        if ((pstate(p).flags || {}).reuso === "util") out.push("# Recuerda: crea utiles.py con tu buscar_posicion, y en notas.py impórtala desde ahí.");
+      } else {
+        var d = defLine(p);
+        if (d) { out.push(d); out.push("    pass  # TODO: todavía no la terminas"); } else out.push("# TODO: " + p.name + " (todavía no lo terminas)");
+      }
+      out.push(""); if (isDefProb(p) || (f.problems[i + 1] && isDefProb(f.problems[i + 1]))) out.push("");
+    });
+    if (withTests && f.tests) out = out.concat(f.tests);
+    while (out.length && out[out.length - 1] === "") out.pop();
+    return out.join("\n") + "\n";
+  }
+  function copyFile() {
+    var text = buildFile(file(), $("with-tests").checked), msg = $("copy-msg");
+    function fallback() {
+      var ta = el("textarea"); ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      var ok = false; try { ok = document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+      msg.hidden = false; msg.textContent = ok ? "Copiado." : "No se pudo copiar aquí. Inténtalo desde el navegador del celular.";
+    }
+    try { navigator.clipboard.writeText(text).then(function () { msg.hidden = false; msg.textContent = "Copiado: pégalo en tu " + file().name + "."; }, fallback); }
+    catch (e) { fallback(); }
+  }
+  $("copy").addEventListener("click", copyFile);
+
+  $("reset").addEventListener("click", function () { $("confirm").hidden = false; $("reset").hidden = true; });
+  $("reset-no").addEventListener("click", function () { $("confirm").hidden = true; $("reset").hidden = false; });
+  $("reset-yes").addEventListener("click", function () {
+    store = { solved: {}, pos: {}, file: 0, prob: {}, ans: {} }; save();
+    $("confirm").hidden = true; $("reset").hidden = false; openFile(0);
+  });
+
+  openFile(fileIdx);
+
+})();
+</script>
