@@ -27,7 +27,7 @@ class App(ctk.CTk):
         self.materias = self.cargar(materias, "materias.json", [])
         self.gastos = self.cargar(gastos, "gastos.json", None)
         if self.gastos is None:
-            self.gastos = {"cuentas": [], "movimientos": [], "recurrentes": [], "categorias": list(gastos.CATEGORIAS_BASE)}
+            self.gastos = gastos.vacio()
         gastos.procesar_automaticos(self.gastos, date.today())
 
         if self.danados:
