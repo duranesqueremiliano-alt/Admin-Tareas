@@ -2,8 +2,8 @@
 # Formulario arriba, filtro y lista de tareas abajo.
 from datetime import datetime, timedelta
 import customtkinter as ctk
-import tareas
-import materias
+from logica import tareas
+from logica import materias
 
 AGREGAR = "+ Agregar materia"
 

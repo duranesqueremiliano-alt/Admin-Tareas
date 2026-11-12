@@ -1,9 +1,10 @@
 # indice_demo.py
 # Demo para la presentación: buscar una nota por id en una LISTA (búsqueda lineal, O(n))
 # contra buscarla en un DICCIONARIO por id (O(1) en promedio).
+# Se corre desde la raíz del proyecto: python -m ejemplos.indice_demo
 import time
 import uuid
-from notas import buscar_posicion
+from logica.notas import buscar_posicion
 
 CUANTAS = 50000
 BUSQUEDAS = 1000

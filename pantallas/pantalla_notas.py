@@ -1,9 +1,9 @@
 # pantalla_notas.py
 # Menú de notas a la izquierda (con buscador) y editor a la derecha.
 import customtkinter as ctk
-import notas
-import materias
-import palabras_clave
+from logica import notas
+from logica import materias
+from logica import palabras_clave
 
 AGREGAR = "+ Agregar materia"
 
