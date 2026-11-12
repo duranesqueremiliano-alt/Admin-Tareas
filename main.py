@@ -2,6 +2,8 @@
 # Arranca la app: carga los datos, arma las tres pestañas y guarda cada 30 segundos y al cerrar.
 from datetime import date
 import customtkinter as ctk
+import ctypes
+import os
 import almacen
 import notas
 import tareas
@@ -12,7 +14,18 @@ from pantalla_tareas import PantallaTareas
 from pantalla_gastos import PantallaGastos
 
 AUTOGUARDADO_MS = 30000
+ANCHO_MENU = 150
+SECCIONES = ["Notas", "Tareas", "Gastos"]
+FUENTE = "Montserrat"
 
+def cargar_fuentes():
+    carpeta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fuentes")
+    if os.name != "nt" or not os.path.isdir(carpeta):
+        return
+    for archivo in os.listdir(carpeta):
+        if archivo.lower().endswith(".ttf"):
+            # 0x10 = solo para este programa, no se instala en Windows
+            ctypes.windll.gdi32.AddFontResourceExW(os.path.join(carpeta, archivo), 0x10, 0)
 
 class App(ctk.CTk):
     def __init__(self):
@@ -33,18 +46,48 @@ class App(ctk.CTk):
         if self.danados:
             aviso = ctk.CTkLabel(self, text="Archivo dañado: " + ", ".join(self.danados) + ". No se guardará encima hasta que lo repares.",
                                  text_color="#e5a50a")
-            aviso.pack(fill="x", padx=12, pady=(10, 0))
+            aviso.grid(row=0, column=0, columnspan=2, sticky="ew", padx=12, pady=(10, 0))
 
-        pestanas = ctk.CTkTabview(self)
-        pestanas.pack(fill="both", expand=True, padx=12, pady=12)
-        for nombre in ["Notas", "Tareas", "Gastos"]:
-            pestanas.add(nombre)
-        PantallaNotas(pestanas.tab("Notas"), self).pack(fill="both", expand=True)
-        PantallaTareas(pestanas.tab("Tareas"), self).pack(fill="both", expand=True)
-        PantallaGastos(pestanas.tab("Gastos"), self).pack(fill="both", expand=True)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(1, weight=1)
 
+        # Menú lateral: ancho fijo, solo los nombres
+        menu = ctk.CTkFrame(self, width=ANCHO_MENU, corner_radius=0)
+        menu.grid(row=1, column=0, sticky="ns")
+        menu.grid_propagate(False)   # que respete el ancho aunque los botones sean chicos
+        menu.pack_propagate(False)
+
+        # Contenido: las 3 pantallas en la misma celda
+        contenido = ctk.CTkFrame(self, fg_color="transparent")
+        contenido.grid(row=1, column=1, sticky="nsew", padx=12, pady=12)
+        contenido.grid_rowconfigure(0, weight=1)
+        contenido.grid_columnconfigure(0, weight=1)
+        self.pantallas = {
+            "Notas": PantallaNotas(contenido, self),
+            "Tareas": PantallaTareas(contenido, self),
+            "Gastos": PantallaGastos(contenido, self),
+        }
+
+        fuente_menu = ctk.CTkFont(family=FUENTE, size=14)
+        self.botones = {}
+        for i, nombre in enumerate(SECCIONES, start=1):
+            self.pantallas[nombre].grid(row=0, column=0, sticky="nsew")
+            boton = ctk.CTkButton(menu, text=nombre, font=fuente_menu, anchor="w", height=38,
+                                fg_color="transparent", text_color=("gray10", "gray90"),
+                                hover_color=("gray75", "gray25"),
+                                command=lambda n=nombre: self.mostrar(n))
+            boton.pack(fill="x", padx=8, pady=4)
+            self.botones[nombre] = boton
+            self.bind(f"<Control-Key-{i}>", lambda e, n=nombre: self.mostrar(n))   # Ctrl+1, Ctrl+2, Ctrl+3
+        self.mostrar("Notas")
+      
         self.protocol("WM_DELETE_WINDOW", self.al_cerrar)
         self.after(AUTOGUARDADO_MS, self.autoguardar)
+
+    def mostrar(self, nombre):
+        self.pantallas[nombre].tkraise()
+        for n, boton in self.botones.items():   # resalta la sección actual
+            boton.configure(fg_color=("gray75", "gray25") if n == nombre else "transparent")
 
     def cargar(self, modulo, nombre, por_defecto):
         try:
@@ -73,3 +116,4 @@ class App(ctk.CTk):
 if __name__ == "__main__":
     ctk.set_appearance_mode("system")
     App().mainloop()
+    ctk.ThemeManager.theme["CTkFont"]["family"] = FUENTE
