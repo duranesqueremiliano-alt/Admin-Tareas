@@ -2,8 +2,8 @@
 # Tareas de la escuela y de la vida diaria, con fecha límite.
 from datetime import datetime
 import uuid
-import almacen
-from notas import buscar_posicion
+from logica import almacen
+from logica.notas import buscar_posicion
 
 TAREAS = "tareas.json"
 FECHA = "%Y-%m-%d %H:%M"

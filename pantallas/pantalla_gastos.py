@@ -3,7 +3,7 @@
 from datetime import date, timedelta
 from tkinter import filedialog
 import customtkinter as ctk
-import gastos
+from logica import gastos
 
 TIPOS_CUENTA = {"Débito": "debito", "Crédito": "credito", "Efectivo": "efectivo"}
 NOMBRE_TIPO = {"debito": "débito", "credito": "crédito", "efectivo": "efectivo"}

@@ -4,14 +4,10 @@ from datetime import date
 import customtkinter as ctk
 import ctypes
 import os
-import almacen
-import notas
-import tareas
-import materias
-import gastos
-from pantalla_notas import PantallaNotas
-from pantalla_tareas import PantallaTareas
-from pantalla_gastos import PantallaGastos
+from logica import almacen, notas, tareas, materias, gastos
+from pantallas.pantalla_notas import PantallaNotas
+from pantallas.pantalla_tareas import PantallaTareas
+from pantallas.pantalla_gastos import PantallaGastos
 
 AUTOGUARDADO_MS = 30000
 ANCHO_MENU = 150

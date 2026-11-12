@@ -6,7 +6,7 @@ import calendar
 import csv
 from datetime import date, datetime, timedelta
 import uuid
-import almacen
+from logica import almacen
 
 GASTOS = "gastos.json"
 DIA = "%Y-%m-%d"
