@@ -14,6 +14,7 @@ MODELO_BASE = "microsoft/trocr-base-handwritten"   # alternativa más rápida y 
 CARPETA_PROPIO = os.path.join(CARPETA_MODELOS, "propio_trocr")
 MARGEN = 6            # píxeles extra alrededor de cada renglón
 MAX_TOKENS = 96       # largo máximo de lo que escribe por renglón
+LADO_MAXIMO = 2400    # las fotos más grandes se reducen a este lado mayor (suficiente para leer una hoja)
 
 _modelos = None
 _candado = threading.Lock()
@@ -38,6 +39,9 @@ def dispositivo():
 
 def cargar_trocr(origen):
     from transformers import TrOCRProcessor, VisionEncoderDecoderModel
+    from transformers.utils import logging as registro
+    registro.set_verbosity_error()        # oculta el reporte "MISSING pooler": esa capa no se usa al leer
+    registro.disable_progress_bar()
     cache = os.path.join(CARPETA_MODELOS, "hf")
     procesador = TrOCRProcessor.from_pretrained(origen, cache_dir=cache)
     modelo = VisionEncoderDecoderModel.from_pretrained(origen, cache_dir=cache)
@@ -129,9 +133,13 @@ def foto_a_texto(ruta):
 
 
 def leer_imagen(ruta):
-    """Lee la imagen con Pillow (aguanta rutas con acentos) y respeta la rotación de fotos del celular."""
+    """Lee la imagen con Pillow (aguanta rutas con acentos), respeta la rotación de fotos del celular
+    y la reduce si es enorme: más píxeles no ayudan a leer y en CPU la vuelven lentísima."""
     import numpy as np
     from PIL import Image, ImageOps
+    Image.MAX_IMAGE_PIXELS = None   # la reducimos enseguida, así que no hace falta el aviso de "imagen gigante"
     with Image.open(ruta) as img:
-        img = ImageOps.exif_transpose(img)
-        return np.array(img.convert("RGB"))
+        img.draft("RGB", (LADO_MAXIMO, LADO_MAXIMO))   # en JPEG decodifica ya reducido (mucho más rápido)
+        img = ImageOps.exif_transpose(img).convert("RGB")
+        img.thumbnail((LADO_MAXIMO, LADO_MAXIMO), Image.LANCZOS)   # mantiene la proporción
+        return np.array(img)
