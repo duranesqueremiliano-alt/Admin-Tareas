@@ -4,7 +4,7 @@ from datetime import date
 import customtkinter as ctk
 import ctypes
 import os
-from logica import almacen, notas, tareas, materias, gastos
+from m import almacen, notas, tareas, materias, gastos
 from pantallas.pantalla_notas import PantallaNotas
 from pantallas.pantalla_tareas import PantallaTareas
 from pantallas.pantalla_gastos import PantallaGastos
