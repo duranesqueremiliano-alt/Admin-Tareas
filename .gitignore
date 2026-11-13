@@ -24,3 +24,7 @@ desktop.ini
 # --- Temporales ---
 *.tmp
 *.log
+
+# --- OCR: modelos descargados y tus fotos de entrenamiento ---
+modelos/
+dataset/
