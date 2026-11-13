@@ -1,6 +1,7 @@
 customtkinter>=5.2
-# Foto -> texto (OCR). Para PyTorch solo-CPU (más ligero):
+# Foto -> texto (letra a mano). Para PyTorch solo-CPU (más ligero):
 #   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 torch
 torchvision
 easyocr
+transformers

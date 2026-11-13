@@ -1,7 +1,7 @@
 # crear_dataset.py
-# Convierte TUS fotos en datos de entrenamiento para EasyOCR.
-# Recorta cada palabra que detecta CRAFT y la guarda como imagen, con lo que el modelo leyó.
-# Tú corriges labels.csv y con eso reentrenas el reconocedor (ver README, "Entrenar con tus datos").
+# Convierte TUS fotos de letra a mano en datos de entrenamiento.
+# Recorta cada renglón (igual que lo hace la app) y lo guarda como imagen junto con lo que el modelo leyó.
+# Tú corriges labels.csv y luego entrenas con:  python herramientas/entrenar.py
 #
 # Uso:
 #   python herramientas/crear_dataset.py foto1.jpg foto2.png
@@ -15,8 +15,7 @@ sys.path.insert(0, RAIZ)
 from m import ocr  # noqa: E402
 
 SALIDA = os.path.join(RAIZ, "dataset")
-CADA_CUANTO_VALIDACION = 10   # 1 de cada 10 recortes va a validación, el resto a entrenamiento
-MARGEN = 4                    # píxeles extra alrededor de cada palabra
+CADA_CUANTO_VALIDACION = 10   # 1 de cada 10 renglones va a validación, el resto a entrenamiento
 EXTENSIONES = (".png", ".jpg", ".jpeg", ".bmp", ".webp", ".tif", ".tiff")
 
 
@@ -45,15 +44,6 @@ def preparar_carpeta(nombre):
     return {"carpeta": carpeta, "archivo": archivo, "escritor": escritor, "total": total}
 
 
-def recortar(imagen, caja):
-    alto, ancho = imagen.shape[:2]
-    x1 = max(int(min(p[0] for p in caja)) - MARGEN, 0)
-    y1 = max(int(min(p[1] for p in caja)) - MARGEN, 0)
-    x2 = min(int(max(p[0] for p in caja)) + MARGEN, ancho)
-    y2 = min(int(max(p[1] for p in caja)) + MARGEN, alto)
-    return imagen[y1:y2, x1:x2]
-
-
 def main():
     from PIL import Image
     fotos = listar_fotos(sys.argv[1:])
@@ -64,23 +54,19 @@ def main():
     contador = sum(p["total"] for p in partes.values())
     for ruta in fotos:
         print("Procesando", ruta)
-        imagen = ocr.leer_imagen(ruta)
         base = os.path.splitext(os.path.basename(ruta))[0]
-        for caja, texto, confianza in ocr.detectar(imagen):
-            recorte = recortar(imagen, caja)
-            if recorte.size == 0:
-                continue
+        for _caja, recorte, texto in ocr.detectar_renglones(ocr.leer_imagen(ruta)):
             contador += 1
             parte = partes["validacion" if contador % CADA_CUANTO_VALIDACION == 0 else "entrenamiento"]
             nombre = f"{base}_{contador:05d}.png"
             Image.fromarray(recorte).save(os.path.join(parte["carpeta"], nombre))
             parte["escritor"].writerow([nombre, texto])
-            print(f"   {nombre}  ->  {texto!r}  ({confianza:.0%})")
+            print(f"   {nombre}  ->  {texto!r}")
     for parte in partes.values():
         parte["archivo"].close()
     print("\nListo. Ahora abre dataset/entrenamiento/labels.csv y dataset/validacion/labels.csv")
-    print("y corrige la columna 'words' para que diga EXACTAMENTE lo que está escrito en cada recorte.")
-    print("Borra las filas (y sus .png) de recortes que no sirvan.")
+    print("y corrige la columna 'words' para que diga EXACTAMENTE lo que está escrito en cada renglón.")
+    print("Borra las filas (y sus .png) de recortes que no sirvan. Luego: python herramientas/entrenar.py")
     return 0
 
 
