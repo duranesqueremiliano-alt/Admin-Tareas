@@ -1,7 +1,11 @@
 # pantalla_notas.py
 # Menú de notas a la izquierda (con buscador) y editor a la derecha.
+import queue
+import threading
+from tkinter import filedialog
 import customtkinter as ctk
 from m import notas
+from m import ocr
 from m import materias
 from m import palabras_clave
 from pantallas.colores import ROJO, ROJO_HOVER
@@ -40,8 +44,9 @@ class PantallaNotas(ctk.CTkFrame):
         ctk.CTkLabel(fila, text="Materia:").pack(side="left")
         self.materia = ctk.CTkOptionMenu(fila, values=self.opciones_materia(), command=self.elegir_materia)
         self.materia.pack(side="left", padx=6)
-        foto = ctk.CTkButton(fila, text="Foto → texto (pendiente)", state="disabled", width=170)
-        foto.pack(side="right")
+        self.boton_foto = ctk.CTkButton(fila, text="Foto → texto", width=140, command=self.foto_a_texto)
+        self.boton_foto.pack(side="right")
+        self.cola_ocr = queue.Queue()
         ctk.CTkLabel(der, text="La primera línea es el título.", text_color="gray").grid(row=1, column=0, sticky="w", padx=10)
         self.editor = ctk.CTkTextbox(der, wrap="word")
         self.editor.grid(row=2, column=0, sticky="nsew", padx=8, pady=4)
@@ -136,6 +141,43 @@ class PantallaNotas(ctk.CTkFrame):
         else:
             self.info.configure(text="Creada: " + self.nota["fechacreacion"] + "   Palabras clave: " + ", ".join(self.nota["palabrasclave"]))
         self.refrescar()
+
+    # ----- Foto -> texto -----
+    def foto_a_texto(self):
+        ruta = filedialog.askopenfilename(title="Elige una foto",
+                                          filetypes=[("Imágenes", "*.png *.jpg *.jpeg *.bmp *.webp *.tif *.tiff"), ("Todos", "*.*")])
+        if not ruta:
+            return
+        self.boton_foto.configure(state="disabled", text="Leyendo…")
+        aviso = "Leyendo la foto…" if ocr.listo() else "Cargando el modelo de letra a mano (la primera vez lo descarga, ~1.4 GB)…"
+        self.mensaje.configure(text=aviso)
+        threading.Thread(target=self._trabajar_ocr, args=(ruta,), daemon=True).start()
+        self.after(200, self._revisar_ocr)
+
+    def _trabajar_ocr(self, ruta):
+        # corre en otro hilo: no toca la ventana, solo deja el resultado en la cola
+        try:
+            self.cola_ocr.put(("ok", ocr.foto_a_texto(ruta)))
+        except ocr.OCRNoInstalado as e:
+            self.cola_ocr.put(("error", str(e)))
+        except Exception as e:
+            self.cola_ocr.put(("error", "No se pudo leer la foto: " + str(e)))
+
+    def _revisar_ocr(self):
+        try:
+            tipo, valor = self.cola_ocr.get_nowait()
+        except queue.Empty:
+            self.after(200, self._revisar_ocr)
+            return
+        self.boton_foto.configure(state="normal", text="Foto → texto")
+        if tipo == "error":
+            self.mensaje.configure(text=valor)
+        elif not valor.strip():
+            self.mensaje.configure(text="No encontré texto en la foto.")
+        else:
+            self.editor.insert("insert", valor + "\n")
+            self.editor.focus_set()
+            self.mensaje.configure(text="Texto agregado. Revísalo y guarda la nota.")
 
     def subir(self, nota):
         notas.mover(self.app.notas, nota["id"], 0)
