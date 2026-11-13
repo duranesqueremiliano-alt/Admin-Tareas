@@ -1,7 +1,7 @@
 #Todas las funciones de las notas
 from datetime import datetime
 import uuid
-from logica import almacen
+from m import almacen
 
 NOTAS = "notas.json"
 FECHA = "%Y-%m-%d %H:%M"

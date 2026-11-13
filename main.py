@@ -8,6 +8,7 @@ from m import almacen, notas, tareas, materias, gastos
 from pantallas.pantalla_notas import PantallaNotas
 from pantallas.pantalla_tareas import PantallaTareas
 from pantallas.pantalla_gastos import PantallaGastos
+from pantallas import colores
 
 AUTOGUARDADO_MS = 30000
 ANCHO_MENU = 150
@@ -41,14 +42,14 @@ class App(ctk.CTk):
 
         if self.danados:
             aviso = ctk.CTkLabel(self, text="Archivo dañado: " + ", ".join(self.danados) + ". No se guardará encima hasta que lo repares.",
-                                 text_color="#e5a50a")
+                                 text_color=colores.ROJO_SUAVE)
             aviso.grid(row=0, column=0, columnspan=2, sticky="ew", padx=12, pady=(10, 0))
 
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(1, weight=1)
 
         # Menú lateral: ancho fijo, solo los nombres
-        menu = ctk.CTkFrame(self, width=ANCHO_MENU, corner_radius=0)
+        menu = ctk.CTkFrame(self, width=ANCHO_MENU, corner_radius=0, fg_color=colores.MENU_FONDO)
         menu.grid(row=1, column=0, sticky="ns")
         menu.grid_propagate(False)   # que respete el ancho aunque los botones sean chicos
         menu.pack_propagate(False)
@@ -64,13 +65,14 @@ class App(ctk.CTk):
             "Gastos": PantallaGastos(contenido, self),
         }
 
+        self.armar_logo(menu)
         fuente_menu = ctk.CTkFont(family=FUENTE, size=14)
         self.botones = {}
         for i, nombre in enumerate(SECCIONES, start=1):
             self.pantallas[nombre].grid(row=0, column=0, sticky="nsew")
             boton = ctk.CTkButton(menu, text=nombre, font=fuente_menu, anchor="w", height=38,
-                                fg_color="transparent", text_color=("gray10", "gray90"),
-                                hover_color=("gray75", "gray25"),
+                                fg_color="transparent", text_color=colores.TEXTO,
+                                hover_color=colores.MENU_HOVER,
                                 command=lambda n=nombre: self.mostrar(n))
             boton.pack(fill="x", padx=8, pady=4)
             self.botones[nombre] = boton
@@ -80,10 +82,21 @@ class App(ctk.CTk):
         self.protocol("WM_DELETE_WINDOW", self.al_cerrar)
         self.after(AUTOGUARDADO_MS, self.autoguardar)
 
+    def armar_logo(self, menu):
+        # Logo provisional: cuadro rojo con las iniciales y el nombre debajo.
+        ctk.CTkLabel(menu, text="AT", width=52, height=52, corner_radius=12, fg_color=colores.ROJO,
+                     text_color="white", font=ctk.CTkFont(family=FUENTE, size=22, weight="bold")).pack(pady=(18, 6))
+        ctk.CTkLabel(menu, text="Admin Tareas", text_color=colores.TEXTO,
+                     font=ctk.CTkFont(family=FUENTE, size=15, weight="bold")).pack()
+        ctk.CTkFrame(menu, height=2, corner_radius=0, fg_color=colores.ROJO).pack(fill="x", padx=16, pady=(10, 12))
+
     def mostrar(self, nombre):
         self.pantallas[nombre].tkraise()
-        for n, boton in self.botones.items():   # resalta la sección actual
-            boton.configure(fg_color=("gray75", "gray25") if n == nombre else "transparent")
+        for n, boton in self.botones.items():   # resalta la sección actual en rojo
+            if n == nombre:
+                boton.configure(fg_color=colores.MENU_ELEGIDO, text_color=colores.ROJO)
+            else:
+                boton.configure(fg_color="transparent", text_color=colores.TEXTO)
 
     def cargar(self, modulo, nombre, por_defecto):
         try:
@@ -110,6 +123,8 @@ class App(ctk.CTk):
 
 
 if __name__ == "__main__":
+    cargar_fuentes()
+    ctk.set_default_color_theme(colores.TEMA)   # grises con rojo (pantallas/tema_gris_rojo.json)
+    ctk.ThemeManager.theme["CTkFont"]["family"] = FUENTE   # antes de crear widgets para que todos la usen
     ctk.set_appearance_mode("system")
     App().mainloop()
-    ctk.ThemeManager.theme["CTkFont"]["family"] = FUENTE

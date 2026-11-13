@@ -1,12 +1,12 @@
 # gastos.py
 # Cuentas (débito, crédito y efectivo), movimientos, transferencias,
-# pagos recurrentes, presupuestos y resumen por categoría.
+# pagos e ingresos recurrentes, presupuestos y resumen por categoría.
 # Todo vive en un diccionario "datos" en memoria.
 import calendar
 import csv
 from datetime import date, datetime, timedelta
 import uuid
-from logica import almacen
+from m import almacen
 
 GASTOS = "gastos.json"
 DIA = "%Y-%m-%d"
@@ -350,7 +350,9 @@ def aviso_presupuesto(datos, categoria, fecha):
     return None
 
 
-# ---------- Pagos recurrentes ----------
+# ---------- Pagos recurrentes (gastos o ingresos que se repiten) ----------
+
+REPETICIONES_AL_MES = {"mensual": 1, "semanal": 52 / 12, "quincenal": 26 / 12, "bimestral": 0.5, "anual": 1 / 12}
 
 def avanzar_fecha(fecha, frecuencia, diabase):
     if frecuencia == "semanal":
@@ -363,23 +365,41 @@ def avanzar_fecha(fecha, frecuencia, diabase):
         return sumar_meses(fecha, 12, diabase)
     return sumar_meses(fecha, 1, diabase)
 
-def crear_recurrente(datos, nombre, monto, cuentaid, frecuencia, proximafecha, categoria="", automatico=False):
-    rec = {
-        "id": uuid.uuid4().hex,
-        "nombre": nombre,
-        "monto": monto,
-        "cuentaid": cuentaid,
-        "frecuencia": frecuencia,
-        "proximafecha": proximafecha.strftime(DIA),
-        "diabase": proximafecha.day,
-        "categoria": asegurar_categoria(datos, categoria),
-        "automatico": automatico,
-        "activo": True,
-    }
+def tipo_recurrente(rec):
+    # Los recurrentes viejos no guardaban el tipo: eran todos gastos.
+    return rec.get("tipo", "gasto")
+
+def costo_mensual(rec):
+    return rec["monto"] * REPETICIONES_AL_MES.get(rec["frecuencia"], 1)
+
+def llenar_recurrente(datos, rec, nombre, monto, cuentaid, frecuencia, proximafecha,
+                      categoria="", automatico=False, tipo="gasto"):
+    rec["nombre"] = nombre
+    rec["monto"] = round(float(monto), 2)
+    rec["cuentaid"] = cuentaid
+    rec["frecuencia"] = frecuencia
+    rec["proximafecha"] = proximafecha.strftime(DIA)
+    rec["diabase"] = proximafecha.day
+    rec["tipo"] = tipo
+    rec["categoria"] = asegurar_categoria(datos, categoria) if tipo == "gasto" else ""
+    rec["automatico"] = automatico
+    return rec
+
+def crear_recurrente(datos, nombre, monto, cuentaid, frecuencia, proximafecha, categoria="",
+                     automatico=False, tipo="gasto"):
+    rec = {"id": uuid.uuid4().hex, "activo": True}
+    llenar_recurrente(datos, rec, nombre, monto, cuentaid, frecuencia, proximafecha, categoria, automatico, tipo)
     datos["recurrentes"].append(rec)
     return rec
 
+def buscar_recurrente(datos, recid):
+    for rec in datos["recurrentes"]:
+        if rec["id"] == recid:
+            return rec
+    return None
+
 def borrar_recurrente(datos, recid):
+    # Los movimientos ya registrados se quedan; solo se deja de repetir.
     for i, rec in enumerate(datos["recurrentes"]):
         if rec["id"] == recid:
             datos["recurrentes"].pop(i)
@@ -390,20 +410,61 @@ def alternar_recurrente(rec):
     rec["activo"] = not rec["activo"]
 
 def registrar_recurrente(datos, rec, fecha):
-    mov = agregar_movimiento(datos, "gasto", rec["monto"], rec["cuentaid"], fecha, rec["nombre"], rec["categoria"], rec["id"])
+    mov = agregar_movimiento(datos, tipo_recurrente(rec), rec["monto"], rec["cuentaid"], fecha,
+                             rec["nombre"], rec["categoria"], rec["id"])
     siguiente = avanzar_fecha(a_fecha(rec["proximafecha"]), rec["frecuencia"], rec["diabase"])
     rec["proximafecha"] = siguiente.strftime(DIA)
     return mov
 
+def ponerse_al_dia(datos, rec, hoy):
+    # Registra todas las fechas que ya pasaron de un recurrente automático.
+    creados = []
+    while rec["activo"] and rec["automatico"] and a_fecha(rec["proximafecha"]) <= hoy and len(creados) < 60:
+        creados.append(registrar_recurrente(datos, rec, a_fecha(rec["proximafecha"])))
+    return creados
+
 def procesar_automaticos(datos, hoy):
     creados = []
     for rec in datos["recurrentes"]:
-        if rec["activo"] and rec["automatico"]:
-            vueltas = 0
-            while a_fecha(rec["proximafecha"]) <= hoy and vueltas < 60:
-                creados.append(registrar_recurrente(datos, rec, a_fecha(rec["proximafecha"])))
-                vueltas += 1
+        creados += ponerse_al_dia(datos, rec, hoy)
     return creados
+
+def programar(datos, tipo, monto, cuentaid, frecuencia, fecha, nombre, categoria="", automatico=False, hoy=None):
+    # Crea un movimiento que se repite. Si su fecha ya llegó, registra el primero de una vez.
+    hoy = hoy or date.today()
+    rec = crear_recurrente(datos, nombre, monto, cuentaid, frecuencia, fecha, categoria, automatico, tipo)
+    creados = []
+    if fecha <= hoy:
+        creados.append(registrar_recurrente(datos, rec, fecha))
+    creados += ponerse_al_dia(datos, rec, hoy)
+    return rec, creados
+
+def repetir_desde(datos, mov, frecuencia, automatico=False, hoy=None):
+    # Convierte un movimiento ya registrado en recurrente: el próximo es una "frecuencia" después.
+    hoy = hoy or date.today()
+    fecha = a_fecha(mov["fecha"])
+    siguiente = avanzar_fecha(fecha, frecuencia, fecha.day)
+    rec = crear_recurrente(datos, mov["descripcion"] or "Pago recurrente", mov["monto"], mov["cuentaid"],
+                           frecuencia, siguiente, mov["categoria"], automatico, mov["tipo"])
+    rec["diabase"] = fecha.day
+    mov["recurrenteid"] = rec["id"]
+    return rec, ponerse_al_dia(datos, rec, hoy)
+
+def orden_recurrente(rec):
+    return (not rec["activo"], rec["proximafecha"])
+
+def recurrentes_de(datos, cuentaid=None, texto=""):
+    # Activos primero y luego por la fecha más cercana.
+    texto = texto.strip().lower()
+    lista = []
+    for rec in datos["recurrentes"]:
+        if cuentaid is not None and rec["cuentaid"] != cuentaid:
+            continue
+        if texto not in rec["nombre"].lower() and texto not in rec["categoria"].lower():
+            continue
+        lista.append(rec)
+    lista.sort(key=orden_recurrente)
+    return lista
 
 def fecha_de_pago(pago):
     return pago[0]
@@ -412,7 +473,7 @@ def proximos_pagos(datos, hoy, dias=7):
     lista = []
     for rec in datos["recurrentes"]:
         fecha = a_fecha(rec["proximafecha"])
-        if rec["activo"] and (fecha - hoy).days <= dias:
+        if rec["activo"] and tipo_recurrente(rec) == "gasto" and (fecha - hoy).days <= dias:
             lista.append([fecha, rec["nombre"], rec["monto"]])
     for cuenta in datos["cuentas"]:
         if cuenta["tipo"] == "credito":
@@ -465,4 +526,13 @@ if __name__ == "__main__":
     os.remove(ruta)
     actualizar_cuenta(tdc, "Tarjeta Nu", "credito", 0, 8000, 20, 10)
     print(info_credito(datos, tdc, hoy)["disponible"])
+    # Ingreso recurrente (sueldo) creado desde el formulario de movimientos
+    sueldo, hechos = programar(datos, "abono", 5000, tdc["id"], "quincenal", date(2026, 10, 20), "Sueldo", hoy=hoy)
+    print(len(hechos), sueldo["proximafecha"], sueldo["categoria"] == "", [p[1] for p in proximos_pagos(datos, hoy)])
+    _, hechos = programar(datos, "gasto", 300, tdc["id"], "mensual", date(2026, 9, 1), "Gym", "Salud", True, hoy)
+    print("gym automático:", len(hechos))
+    cafe = filtrar(datos, texto="café")[0]
+    rec, _ = repetir_desde(datos, cafe, "semanal", hoy=hoy)
+    print("café cada semana:", rec["proximafecha"], cafe["recurrenteid"] == rec["id"])
+    print([r["nombre"] for r in recurrentes_de(datos)], round(costo_mensual(rec), 2))
     print(borrar_cuenta(datos, deb["id"]), len(datos["movimientos"]))

@@ -2,8 +2,9 @@
 # Formulario arriba, filtro y lista de tareas abajo.
 from datetime import datetime, timedelta
 import customtkinter as ctk
-from logica import tareas
-from logica import materias
+from m import tareas
+from m import materias
+from pantallas.colores import ROJO, ROJO_HOVER, ROJO_SUAVE, GRIS_FUERTE, BOTON_GRIS, BOTON_GRIS_HOVER
 
 AGREGAR = "+ Agregar materia"
 
@@ -27,7 +28,7 @@ class PantallaTareas(ctk.CTkFrame):
         self.materia = ctk.CTkOptionMenu(form, values=self.opciones_materia(), command=self.elegir_materia, width=150)
         self.materia.grid(row=0, column=2, padx=4)
         ctk.CTkButton(form, text="Guardar", width=90, command=self.guardar).grid(row=0, column=3, padx=4)
-        ctk.CTkButton(form, text="Nueva", width=70, fg_color="gray", command=self.nueva).grid(row=0, column=4, padx=(4, 8))
+        ctk.CTkButton(form, text="Nueva", width=70, fg_color=BOTON_GRIS, hover_color=BOTON_GRIS_HOVER, command=self.nueva).grid(row=0, column=4, padx=(4, 8))
         rapidas = ctk.CTkFrame(form, fg_color="transparent")
         rapidas.grid(row=1, column=0, columnspan=5, sticky="w", padx=8, pady=(0, 8))
         for texto, dias in [("Hoy", 0), ("Mañana", 1), ("En 1 semana", 7)]:
@@ -92,7 +93,7 @@ class PantallaTareas(ctk.CTkFrame):
         try:
             datetime.strptime(limite, tareas.FECHA)
         except ValueError:
-            self.mensaje.configure(text="La fecha va así: 2026-11-20 23:59", text_color="#e5a50a")
+            self.mensaje.configure(text="La fecha va así: 2026-11-20 23:59", text_color=ROJO_SUAVE)
             return
         materia = self.materia.get()
         if materia == AGREGAR:
@@ -140,9 +141,9 @@ class PantallaTareas(ctk.CTkFrame):
             etiqueta = ctk.CTkLabel(self.lista, text=texto, justify="left", anchor="w")
             etiqueta.grid(row=fila, column=1, sticky="ew")
             etiqueta.bind("<Button-1>", lambda e, t=tarea: self.editar(t))
-            color = {"Vencida": "#e01b24", "Completada": "gray", "Activa": "#2ec27e"}[estado]
+            color = {"Vencida": ROJO, "Completada": "gray", "Activa": GRIS_FUERTE}[estado]
             ctk.CTkLabel(self.lista, text=estado, text_color=color, width=90).grid(row=fila, column=2)
-            ctk.CTkButton(self.lista, text="✕", width=30, fg_color="#a33", hover_color="#822",
+            ctk.CTkButton(self.lista, text="✕", width=30, fg_color=ROJO, hover_color=ROJO_HOVER,
                           command=lambda t=tarea: self.borrar(t)).grid(row=fila, column=3, padx=4)
             fila += 1
         if fila == 0:
