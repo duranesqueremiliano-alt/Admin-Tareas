@@ -149,7 +149,7 @@ class PantallaNotas(ctk.CTkFrame):
         if not ruta:
             return
         self.boton_foto.configure(state="disabled", text="Leyendo…")
-        aviso = "Leyendo la foto…" if ocr.listo() else "Cargando el modelo (la primera vez lo descarga, ~100 MB)…"
+        aviso = "Leyendo la foto…" if ocr.listo() else "Cargando el modelo de letra a mano (la primera vez lo descarga, ~1.4 GB)…"
         self.mensaje.configure(text=aviso)
         threading.Thread(target=self._trabajar_ocr, args=(ruta,), daemon=True).start()
         self.after(200, self._revisar_ocr)
