@@ -1,9 +1,10 @@
 # pantalla_notas.py
 # Menú de notas a la izquierda (con buscador) y editor a la derecha.
 import customtkinter as ctk
-from logica import notas
-from logica import materias
-from logica import palabras_clave
+from m import notas
+from m import materias
+from m import palabras_clave
+from pantallas.colores import ROJO, ROJO_HOVER
 
 AGREGAR = "+ Agregar materia"
 
@@ -96,7 +97,7 @@ class PantallaNotas(ctk.CTkFrame):
         botones = ctk.CTkFrame(caja, fg_color="transparent")
         botones.grid(row=0, column=1, rowspan=2, padx=4)
         ctk.CTkButton(botones, text="▲", width=30, command=lambda: self.subir(nota)).pack(pady=2)
-        ctk.CTkButton(botones, text="✕", width=30, fg_color="#a33", hover_color="#822",
+        ctk.CTkButton(botones, text="✕", width=30, fg_color=ROJO, hover_color=ROJO_HOVER,
                       command=lambda: self.borrar(nota)).pack(pady=2)
         for elemento in (caja, titulo, texto):
             elemento.bind("<Button-1>", lambda e: self.abrir(nota))

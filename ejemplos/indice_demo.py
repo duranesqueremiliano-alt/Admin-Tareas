@@ -4,7 +4,7 @@
 # Se corre desde la raíz del proyecto: python -m ejemplos.indice_demo
 import time
 import uuid
-from logica.notas import buscar_posicion
+from m.notas import buscar_posicion
 
 CUANTAS = 50000
 BUSQUEDAS = 1000

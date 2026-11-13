@@ -1,0 +1,364 @@
+{
+  "CTk": {
+    "fg_color": [
+      "gray92",
+      "gray14"
+    ]
+  },
+  "CTkToplevel": {
+    "fg_color": [
+      "gray92",
+      "gray14"
+    ]
+  },
+  "CTkFrame": {
+    "corner_radius": 6,
+    "border_width": 0,
+    "fg_color": [
+      "gray86",
+      "gray17"
+    ],
+    "top_fg_color": [
+      "gray81",
+      "gray20"
+    ],
+    "border_color": [
+      "gray65",
+      "gray28"
+    ]
+  },
+  "CTkButton": {
+    "corner_radius": 6,
+    "border_width": 0,
+    "fg_color": [
+      "#C8102E",
+      "#B01028"
+    ],
+    "hover_color": [
+      "#9B0C23",
+      "#860B1E"
+    ],
+    "border_color": [
+      "gray30",
+      "gray60"
+    ],
+    "text_color": [
+      "gray98",
+      "gray92"
+    ],
+    "text_color_disabled": [
+      "gray74",
+      "gray60"
+    ]
+  },
+  "CTkLabel": {
+    "corner_radius": 0,
+    "border_width": 0,
+    "fg_color": "transparent",
+    "border_color": [
+      "#979DA2",
+      "#565B5E"
+    ],
+    "text_color": [
+      "gray10",
+      "gray90"
+    ]
+  },
+  "CTkEntry": {
+    "corner_radius": 6,
+    "border_width": 2,
+    "fg_color": [
+      "gray97",
+      "gray20"
+    ],
+    "border_color": [
+      "gray65",
+      "gray32"
+    ],
+    "text_color": [
+      "gray10",
+      "gray90"
+    ],
+    "placeholder_text_color": [
+      "gray52",
+      "gray62"
+    ]
+  },
+  "CTkCheckBox": {
+    "corner_radius": 6,
+    "border_width": 3,
+    "fg_color": [
+      "#C8102E",
+      "#B01028"
+    ],
+    "border_color": [
+      "gray30",
+      "gray60"
+    ],
+    "hover_color": [
+      "#9B0C23",
+      "#860B1E"
+    ],
+    "checkmark_color": [
+      "gray98",
+      "gray92"
+    ],
+    "text_color": [
+      "gray10",
+      "gray90"
+    ],
+    "text_color_disabled": [
+      "gray60",
+      "gray45"
+    ]
+  },
+  "CTkSwitch": {
+    "corner_radius": 1000,
+    "border_width": 3,
+    "button_length": 0,
+    "fg_color": [
+      "gray60",
+      "gray30"
+    ],
+    "progress_color": [
+      "#C8102E",
+      "#B01028"
+    ],
+    "button_color": [
+      "gray36",
+      "#D5D9DE"
+    ],
+    "button_hover_color": [
+      "gray20",
+      "gray100"
+    ],
+    "text_color": [
+      "gray10",
+      "gray90"
+    ],
+    "text_color_disabled": [
+      "gray60",
+      "gray45"
+    ]
+  },
+  "CTkRadioButton": {
+    "corner_radius": 1000,
+    "border_width_checked": 6,
+    "border_width_unchecked": 3,
+    "fg_color": [
+      "#C8102E",
+      "#B01028"
+    ],
+    "border_color": [
+      "gray30",
+      "gray60"
+    ],
+    "hover_color": [
+      "#9B0C23",
+      "#860B1E"
+    ],
+    "text_color": [
+      "gray10",
+      "gray90"
+    ],
+    "text_color_disabled": [
+      "gray60",
+      "gray45"
+    ]
+  },
+  "CTkProgressBar": {
+    "corner_radius": 1000,
+    "border_width": 0,
+    "fg_color": [
+      "gray70",
+      "gray28"
+    ],
+    "progress_color": [
+      "#C8102E",
+      "#B01028"
+    ],
+    "border_color": [
+      "gray",
+      "gray"
+    ]
+  },
+  "CTkSlider": {
+    "corner_radius": 1000,
+    "button_corner_radius": 1000,
+    "border_width": 6,
+    "button_length": 0,
+    "fg_color": [
+      "gray70",
+      "gray28"
+    ],
+    "progress_color": [
+      "gray40",
+      "gray65"
+    ],
+    "button_color": [
+      "#C8102E",
+      "#B01028"
+    ],
+    "button_hover_color": [
+      "#9B0C23",
+      "#860B1E"
+    ]
+  },
+  "CTkOptionMenu": {
+    "corner_radius": 6,
+    "fg_color": [
+      "gray35",
+      "gray30"
+    ],
+    "button_color": [
+      "gray28",
+      "gray24"
+    ],
+    "button_hover_color": [
+      "gray22",
+      "gray18"
+    ],
+    "text_color": [
+      "gray98",
+      "gray92"
+    ],
+    "text_color_disabled": [
+      "gray74",
+      "gray60"
+    ]
+  },
+  "CTkComboBox": {
+    "corner_radius": 6,
+    "border_width": 2,
+    "fg_color": [
+      "gray97",
+      "gray20"
+    ],
+    "border_color": [
+      "gray65",
+      "gray32"
+    ],
+    "button_color": [
+      "gray65",
+      "gray32"
+    ],
+    "button_hover_color": [
+      "gray50",
+      "gray42"
+    ],
+    "text_color": [
+      "gray10",
+      "gray90"
+    ],
+    "text_color_disabled": [
+      "gray50",
+      "gray45"
+    ]
+  },
+  "CTkScrollbar": {
+    "corner_radius": 1000,
+    "border_spacing": 4,
+    "fg_color": "transparent",
+    "button_color": [
+      "gray55",
+      "gray41"
+    ],
+    "button_hover_color": [
+      "gray40",
+      "gray53"
+    ]
+  },
+  "CTkSegmentedButton": {
+    "corner_radius": 6,
+    "border_width": 2,
+    "fg_color": [
+      "gray60",
+      "gray29"
+    ],
+    "selected_color": [
+      "#C8102E",
+      "#B01028"
+    ],
+    "selected_hover_color": [
+      "#9B0C23",
+      "#860B1E"
+    ],
+    "unselected_color": [
+      "gray60",
+      "gray29"
+    ],
+    "unselected_hover_color": [
+      "gray50",
+      "gray38"
+    ],
+    "text_color": [
+      "gray98",
+      "gray92"
+    ],
+    "text_color_disabled": [
+      "gray74",
+      "gray60"
+    ]
+  },
+  "CTkTextbox": {
+    "corner_radius": 6,
+    "border_width": 0,
+    "fg_color": [
+      "gray97",
+      "gray12"
+    ],
+    "border_color": [
+      "gray65",
+      "gray32"
+    ],
+    "text_color": [
+      "gray10",
+      "gray90"
+    ],
+    "scrollbar_button_color": [
+      "gray55",
+      "gray41"
+    ],
+    "scrollbar_button_hover_color": [
+      "gray40",
+      "gray53"
+    ]
+  },
+  "CTkScrollableFrame": {
+    "label_fg_color": [
+      "gray78",
+      "gray23"
+    ]
+  },
+  "DropdownMenu": {
+    "fg_color": [
+      "gray90",
+      "gray20"
+    ],
+    "hover_color": [
+      "gray75",
+      "gray28"
+    ],
+    "text_color": [
+      "gray10",
+      "gray90"
+    ]
+  },
+  "CTkFont": {
+    "macOS": {
+      "family": "Montserrat",
+      "size": 13,
+      "weight": "normal"
+    },
+    "Windows": {
+      "family": "Montserrat",
+      "size": 13,
+      "weight": "normal"
+    },
+    "Linux": {
+      "family": "Montserrat",
+      "size": 13,
+      "weight": "normal"
+    }
+  }
+}

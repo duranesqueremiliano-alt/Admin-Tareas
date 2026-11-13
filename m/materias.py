@@ -1,6 +1,6 @@
 # materias.py
 # La lista de materias que comparten notas y tareas.
-from logica import almacen
+from m import almacen
 
 MATERIAS = "materias.json"
 
