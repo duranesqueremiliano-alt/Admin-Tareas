@@ -28,3 +28,6 @@ desktop.ini
 # --- OCR: modelos descargados y tus fotos de entrenamiento ---
 modelos/
 dataset/
+
+# --- Fotos de apuntes para transcribir ---
+fotos_apuntes/
