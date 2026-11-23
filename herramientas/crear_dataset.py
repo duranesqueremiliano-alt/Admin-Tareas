@@ -6,16 +6,13 @@
 # Uso:
 #   python herramientas/crear_dataset.py foto1.jpg foto2.png
 #   python herramientas/crear_dataset.py carpeta_con_fotos/
-#   python herramientas/crear_dataset.py --repetir foto1.jpg   # vuelve a cortar una foto que ya estaba
+import csv
 import os
-import re
 import sys
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from m import ocr  # noqa: E402
-import etiquetas  # noqa: E402
 
 SALIDA = os.path.join(RAIZ, "dataset")
 CADA_CUANTO_VALIDACION = 10   # 1 de cada 10 renglones va a validación, el resto a entrenamiento
@@ -34,52 +31,42 @@ def listar_fotos(argumentos):
     return fotos
 
 
-def ya_procesadas(partes):
-    """Nombres base de las fotos que ya tienen renglones en dataset/ (foto_00012.png -> foto)."""
-    nombres = set()
-    for parte in partes.values():
-        for f in os.listdir(parte["carpeta"]):
-            coincide = re.fullmatch(r"(.+)_\d{5}\.png", f)
-            if coincide:
-                nombres.add(coincide.group(1))
-    return nombres
-
-
 def preparar_carpeta(nombre):
     carpeta = os.path.join(SALIDA, nombre)
     os.makedirs(carpeta, exist_ok=True)
+    etiquetas = os.path.join(carpeta, "labels.csv")
+    nueva = not os.path.isfile(etiquetas)
+    archivo = open(etiquetas, "a", newline="", encoding="utf-8")
+    escritor = csv.writer(archivo)
+    if nueva:
+        escritor.writerow(["filename", "words"])
     total = len([f for f in os.listdir(carpeta) if f.endswith(".png")])
-    return {"nombre": nombre, "carpeta": carpeta, "total": total}
+    return {"carpeta": carpeta, "archivo": archivo, "escritor": escritor, "total": total}
 
 
 def main():
     from PIL import Image
-    argumentos = [a for a in sys.argv[1:] if a != "--repetir"]
-    repetir = len(argumentos) != len(sys.argv) - 1
-    fotos = listar_fotos(argumentos)
+    fotos = listar_fotos(sys.argv[1:])
     if not fotos:
         print("Uso: python herramientas/crear_dataset.py foto1.jpg [foto2.jpg ...]   o   carpeta/")
         return 1
     partes = {"entrenamiento": preparar_carpeta("entrenamiento"), "validacion": preparar_carpeta("validacion")}
     contador = sum(p["total"] for p in partes.values())
-    hechas = set() if repetir else ya_procesadas(partes)
     for ruta in fotos:
-        base = os.path.splitext(os.path.basename(ruta))[0]
-        if base in hechas:   # si no, se duplicarían sus renglones
-            print("Ya estaba en dataset/, se salta:", ruta, "(usa --repetir para cortarla de nuevo)")
-            continue
         print("Procesando", ruta)
+        base = os.path.splitext(os.path.basename(ruta))[0]
         for _caja, recorte, texto in ocr.detectar_renglones(ocr.leer_imagen(ruta)):
             contador += 1
             parte = partes["validacion" if contador % CADA_CUANTO_VALIDACION == 0 else "entrenamiento"]
             nombre = f"{base}_{contador:05d}.png"
             Image.fromarray(recorte).save(os.path.join(parte["carpeta"], nombre))
-            # se abre y se cierra en cada renglón: así revisar.py puede guardar mientras esto corre
-            etiquetas.agregar(parte["nombre"], [{"filename": nombre, "words": texto, "ocr": texto,
-                                                 "estado": "pendiente"}])
+            parte["escritor"].writerow([nombre, texto])
             print(f"   {nombre}  ->  {texto!r}")
-    print("\nListo. Revisa cada renglón con:  python herramientas/revisar.py")
-    print("(o pídele a Claude /transcribir-apuntes para que los corrija antes). Luego: python herramientas/entrenar.py")
+    for parte in partes.values():
+        parte["archivo"].close()
+    print("\nListo. Ahora abre dataset/entrenamiento/labels.csv y dataset/validacion/labels.csv")
+    print("y corrige la columna 'words' para que diga EXACTAMENTE lo que está escrito en cada renglón.")
+    print("Borra las filas (y sus .png) de recortes que no sirvan. Luego: python herramientas/entrenar.py")
     return 0
 
 

@@ -80,7 +80,7 @@ def asegurar_categoria(datos, nombre):
 
 # ---------- Cuentas ----------
 
-def crear_cuenta(datos, nombre, tipo, saldoinicial, limite=0, diacorte=1, diapago=1):
+def crear_cuenta(datos, nombre, tipo, saldoinicial, limite=0, diacorte=1, diapago=1, tasa=0):
     cuenta = {
         "id": uuid.uuid4().hex,
         "nombre": nombre,
@@ -89,11 +89,15 @@ def crear_cuenta(datos, nombre, tipo, saldoinicial, limite=0, diacorte=1, diapag
         "limite": limite,
         "diacorte": diacorte,
         "diapago": diapago,
+        # Solo para inversiones: % de crecimiento al año, valores anotados a mano y desde cuándo existe.
+        "tasa": tasa,
+        "valores": [],
+        "fechainicio": date.today().strftime(DIA),
     }
     datos["cuentas"].append(cuenta)
     return cuenta
 
-def actualizar_cuenta(cuenta, nombre, tipo, saldoinicial, limite=0, diacorte=1, diapago=1):
+def actualizar_cuenta(cuenta, nombre, tipo, saldoinicial, limite=0, diacorte=1, diapago=1, tasa=0):
     cuenta["nombre"] = nombre
     cuenta["tipo"] = tipo
     cuenta["saldoinicial"] = saldoinicial
@@ -103,6 +107,10 @@ def actualizar_cuenta(cuenta, nombre, tipo, saldoinicial, limite=0, diacorte=1, 
         cuenta["diapago"] = diapago
     else:
         cuenta["limite"] = 0
+    if tipo == "inversion":
+        cuenta["tasa"] = tasa
+        cuenta.setdefault("valores", [])
+        cuenta.setdefault("fechainicio", date.today().strftime(DIA))
     return cuenta
 
 def buscar_cuenta(datos, cuentaid):
@@ -131,6 +139,8 @@ def borrar_cuenta(datos, cuentaid):
 def saldo(datos, cuenta):
     # Una transferencia sale de "cuentaid" (como un gasto)
     # y entra a "destinoid" (como un abono).
+    if cuenta["tipo"] == "inversion":
+        return valor_inversion(datos, cuenta, date.today())
     gastos = 0
     abonos = 0
     for mov in datos["movimientos"]:
@@ -185,9 +195,84 @@ def total_disponible(datos):
     # Dinero real: saldos de débito y efectivo (sin contar las tarjetas).
     total = 0
     for cuenta in datos["cuentas"]:
-        if cuenta["tipo"] != "credito":
+        if cuenta["tipo"] in ("debito", "efectivo"):
             total += saldo(datos, cuenta)
     return round(total, 2)
+
+def total_invertido(datos):
+    total = 0
+    for cuenta in datos["cuentas"]:
+        if cuenta["tipo"] == "inversion":
+            total += saldo(datos, cuenta)
+    return round(total, 2)
+
+
+# ---------- Inversiones ----------
+# El valor crece con interés compuesto ("tasa" % al año). Si anotas el valor real a mano,
+# el cálculo arranca de ese valor en esa fecha. Aportes y retiros son movimientos normales.
+
+def flujo_de(mov, cuentaid):
+    # Cuánto dinero entra (+) o sale (-) de la cuenta con este movimiento.
+    if mov["cuentaid"] == cuentaid:
+        return mov["monto"] if mov["tipo"] == "abono" else -mov["monto"]
+    if mov.get("destinoid") == cuentaid:
+        return mov["monto"]
+    return 0
+
+def inicio_inversion(cuenta):
+    return a_fecha(cuenta.get("fechainicio") or date.today().strftime(DIA))
+
+def valor_inversion(datos, cuenta, hasta):
+    crecimiento = 1 + cuenta.get("tasa", 0) / 100
+    base_fecha = inicio_inversion(cuenta)
+    base_valor = cuenta["saldoinicial"]
+    for registro in cuenta.get("valores", []):
+        fecha = a_fecha(registro["fecha"])
+        if base_fecha <= fecha <= hasta:
+            base_fecha, base_valor = fecha, registro["valor"]
+    # Cada peso crece según los años que lleva invertido: valor * (1 + tasa) ** años
+    total = base_valor * crecimiento ** ((hasta - base_fecha).days / 365)
+    for mov in datos["movimientos"]:
+        fecha = a_fecha(mov["fecha"])
+        if base_fecha < fecha <= hasta:
+            total += flujo_de(mov, cuenta["id"]) * crecimiento ** ((hasta - fecha).days / 365)
+    return round(total, 2)
+
+def aportado(datos, cuenta):
+    # Dinero que pusiste tú (sin ganancias): saldo inicial + aportes - retiros.
+    total = cuenta["saldoinicial"]
+    for mov in datos["movimientos"]:
+        total += flujo_de(mov, cuenta["id"])
+    return round(total, 2)
+
+def registrar_valor(cuenta, fecha, valor):
+    # Anota el valor real de la inversión en una fecha (reemplaza si ya había uno ese día).
+    texto = fecha.strftime(DIA)
+    valores = []
+    for registro in cuenta.get("valores", []):
+        if registro["fecha"] != texto:
+            valores.append(registro)
+    valores.append({"fecha": texto, "valor": round(float(valor), 2)})
+    valores.sort(key=fecha_de)
+    cuenta["valores"] = valores
+
+def historial_inversion(datos, cuenta, hoy):
+    # Puntos [fecha, valor] para la gráfica: inicio, el día 1 de cada mes, los valores anotados y hoy.
+    inicio = inicio_inversion(cuenta)
+    fechas = {inicio, hoy}
+    mes = sumar_meses(inicio_mes(inicio), 1, 1)
+    while mes < hoy:
+        fechas.add(mes)
+        mes = sumar_meses(mes, 1, 1)
+    for registro in cuenta.get("valores", []):
+        fecha = a_fecha(registro["fecha"])
+        if inicio <= fecha <= hoy:
+            fechas.add(fecha)
+    puntos = []
+    for fecha in sorted(fechas):
+        if fecha <= hoy:
+            puntos.append([fecha, valor_inversion(datos, cuenta, fecha)])
+    return puntos
 
 def total_deuda(datos):
     total = 0
@@ -313,6 +398,61 @@ def exportar_csv(datos, ruta):
                                destino["nombre"] if destino else "",
                                mov["categoria"], mov["descripcion"]])
     return len(datos["movimientos"])
+
+def cuenta_o_nueva(datos, nombre):
+    # Busca la cuenta por nombre (sin importar mayúsculas); si no existe, crea una de débito en 0.
+    nombre = (nombre or "").strip()
+    if nombre == "":
+        return None
+    for cuenta in datos["cuentas"]:
+        if cuenta["nombre"].lower() == nombre.lower():
+            return cuenta
+    return crear_cuenta(datos, nombre, "debito", 0)
+
+def clave_movimiento(mov):
+    return (mov["fecha"], mov["tipo"], round(mov["monto"], 2), mov["cuentaid"], mov["descripcion"])
+
+def importar_csv(datos, ruta):
+    # Lee un CSV con las mismas columnas que exportar_csv. Devuelve [nuevos, repetidos, con_error].
+    # Si falta la columna "tipo", el signo del monto decide: negativo = gasto, positivo = abono.
+    existentes = set()
+    for mov in datos["movimientos"]:
+        existentes.add(clave_movimiento(mov))
+    nuevos, repetidos, errores = 0, 0, 0
+    with open(ruta, newline="", encoding="utf-8-sig") as f:
+        for fila in csv.DictReader(f):
+            try:
+                fecha = a_fecha((fila.get("fecha") or "").strip())
+                monto = float((fila.get("monto") or "").replace(",", "").replace("$", "").strip())
+            except ValueError:
+                errores += 1
+                continue
+            tipo = (fila.get("tipo") or "").strip().lower()
+            if tipo not in ("gasto", "abono", "transferencia"):
+                tipo = "gasto" if monto < 0 else "abono"
+            monto = abs(monto)
+            cuenta = cuenta_o_nueva(datos, fila.get("cuenta"))
+            if cuenta is None or monto == 0:
+                errores += 1
+                continue
+            destinoid = None
+            if tipo == "transferencia":
+                destino = cuenta_o_nueva(datos, fila.get("destino"))
+                if destino is None or destino is cuenta:
+                    errores += 1
+                    continue
+                destinoid = destino["id"]
+            descripcion = (fila.get("descripcion") or "").strip()
+            mov = {"id": uuid.uuid4().hex, "recurrenteid": None}
+            llenar_movimiento(datos, mov, tipo, monto, cuenta["id"], fecha, descripcion,
+                              fila.get("categoria") or "", destinoid)
+            if clave_movimiento(mov) in existentes:
+                repetidos += 1
+                continue
+            existentes.add(clave_movimiento(mov))
+            datos["movimientos"].append(mov)
+            nuevos += 1
+    return [nuevos, repetidos, errores]
 
 
 # ---------- Presupuestos (diccionario categoría -> límite mensual) ----------
