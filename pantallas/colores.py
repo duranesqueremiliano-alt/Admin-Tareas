@@ -1,21 +1,15 @@
 # colores.py
 # Paleta de la app: escala de grises con rojo como único color.
-# Cada color es (modo claro, modo oscuro), así CustomTkinter elige solo.
-import os
+# En Flet cada color es un solo valor. Los grises salen del tema (ft.Colors.ON_SURFACE...),
+# así que cambian solos entre modo claro y oscuro. El rojo es fijo porque se ve bien en los dos.
+import flet as ft
 
-TEMA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tema_gris_rojo.json")
+ROJO = "#E0283F"                         # acento: gastos, vencido, borrar
+ROJO_SUAVE = "#E5707D"                   # avisos
 
-ROJO = ("#C8102E", "#E0283F")           # acento: botones principales, gastos, vencido
-ROJO_HOVER = ("#9B0C23", "#B51E31")
-ROJO_SUAVE = ("#D9606F", "#F08A96")     # avisos (antes amarillo)
+TEXTO = ft.Colors.ON_SURFACE             # texto normal
+GRIS = ft.Colors.ON_SURFACE_VARIANT      # texto secundario / informativo
+GRIS_FUERTE = ft.Colors.ON_SURFACE       # cosas "bien" (ingresos, uso sano)
 
-TEXTO = ("gray10", "gray90")            # texto normal
-GRIS = ("gray40", "gray65")             # texto secundario / informativo (antes azul)
-GRIS_FUERTE = ("gray30", "gray75")      # cosas "bien" (antes verde)
-
-MENU_FONDO = ("gray85", "gray11")       # barra lateral
-MENU_HOVER = ("gray78", "gray20")
-MENU_ELEGIDO = ("gray75", "gray23")
-
-BOTON_GRIS = ("gray55", "gray32")       # botones secundarios (Hoy, Pausar, Editar…)
-BOTON_GRIS_HOVER = ("gray45", "gray40")
+MENU_FONDO = ft.Colors.SURFACE_CONTAINER_LOW      # barra lateral
+BORDE = ft.Colors.OUTLINE_VARIANT                 # bordes de cajas y listas

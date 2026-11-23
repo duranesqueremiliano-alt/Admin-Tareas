@@ -1,35 +1,44 @@
 # main.py
-# Arranca la app: carga los datos, arma las tres pestañas y guarda cada 30 segundos y al cerrar.
+# Arranca la app: carga los datos, arma el menú lateral con las tres pantallas
+# y guarda cada 30 segundos y al cerrar.
+import asyncio
 from datetime import date
-import customtkinter as ctk
-import ctypes
 import os
+import flet as ft
+import flet_shadcn_ui as shad
 from m import almacen, notas, tareas, materias, gastos
 from pantallas.pantalla_notas import PantallaNotas
 from pantallas.pantalla_tareas import PantallaTareas
 from pantallas.pantalla_gastos import PantallaGastos
 from pantallas import colores
+from pantallas.comun import texto
 
-AUTOGUARDADO_MS = 30000
-ANCHO_MENU = 150
+AUTOGUARDADO_S = 30
+ANCHO_MENU = 170
 SECCIONES = ["Notas", "Tareas", "Gastos"]
+ICONOS = {"Notas": shad.LucideIcons.NOTEBOOK_PEN, "Tareas": shad.LucideIcons.LIST_TODO,
+          "Gastos": shad.LucideIcons.WALLET}
 FUENTE = "Montserrat"
+CARPETA = os.path.dirname(os.path.abspath(__file__))
 
-def cargar_fuentes():
-    carpeta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fuentes")
-    if os.name != "nt" or not os.path.isdir(carpeta):
-        return
-    for archivo in os.listdir(carpeta):
-        if archivo.lower().endswith(".ttf"):
-            # 0x10 = solo para este programa, no se instala en Windows
-            ctypes.windll.gdi32.AddFontResourceExW(os.path.join(carpeta, archivo), 0x10, 0)
 
-class App(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        self.title("Admin-Tareas")
-        self.geometry("1050x680")
-        self.minsize(820, 540)
+class App:
+    # Ya no es una ventana: es una clase normal que guarda los datos y la página de Flet.
+    def __init__(self, page):
+        self.page = page
+        page.title = "Admin-Tareas"
+        page.window.width = 1050
+        page.window.height = 680
+        page.window.min_width = 820
+        page.window.min_height = 540
+        page.padding = 0
+        page.theme_mode = ft.ThemeMode.SYSTEM
+        page.fonts = {FUENTE: "Montserrat-Regular.ttf"}
+        page.theme = ft.Theme(font_family=FUENTE)
+        page.dark_theme = ft.Theme(font_family=FUENTE)
+        # Español para los calendarios (nombres de meses y días).
+        page.locale_configuration = ft.LocaleConfiguration(supported_locales=[ft.Locale("es", "MX")],
+                                                           current_locale=ft.Locale("es", "MX"))
 
         self.danados = []
         self.notas = self.cargar(notas, "notas.json", [])
@@ -40,63 +49,71 @@ class App(ctk.CTk):
             self.gastos = gastos.vacio()
         gastos.procesar_automaticos(self.gastos, date.today())
 
-        if self.danados:
-            aviso = ctk.CTkLabel(self, text="Archivo dañado: " + ", ".join(self.danados) + ". No se guardará encima hasta que lo repares.",
-                                 text_color=colores.ROJO_SUAVE)
-            aviso.grid(row=0, column=0, columnspan=2, sticky="ew", padx=12, pady=(10, 0))
-
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-
-        # Menú lateral: ancho fijo, solo los nombres
-        menu = ctk.CTkFrame(self, width=ANCHO_MENU, corner_radius=0, fg_color=colores.MENU_FONDO)
-        menu.grid(row=1, column=0, sticky="ns")
-        menu.grid_propagate(False)   # que respete el ancho aunque los botones sean chicos
-        menu.pack_propagate(False)
-
-        # Contenido: las 3 pantallas en la misma celda
-        contenido = ctk.CTkFrame(self, fg_color="transparent")
-        contenido.grid(row=1, column=1, sticky="nsew", padx=12, pady=12)
-        contenido.grid_rowconfigure(0, weight=1)
-        contenido.grid_columnconfigure(0, weight=1)
+        # Las 3 pantallas viven siempre en la página; solo se ve una (visible=True).
         self.pantallas = {
-            "Notas": PantallaNotas(contenido, self),
-            "Tareas": PantallaTareas(contenido, self),
-            "Gastos": PantallaGastos(contenido, self),
+            "Notas": PantallaNotas(self),
+            "Tareas": PantallaTareas(self),
+            "Gastos": PantallaGastos(self),
         }
+        contenido = ft.Stack([self.pantallas[n].vista for n in SECCIONES], expand=True)
 
-        self.armar_logo(menu)
-        fuente_menu = ctk.CTkFont(family=FUENTE, size=14)
         self.botones = {}
-        for i, nombre in enumerate(SECCIONES, start=1):
-            self.pantallas[nombre].grid(row=0, column=0, sticky="nsew")
-            boton = ctk.CTkButton(menu, text=nombre, font=fuente_menu, anchor="w", height=38,
-                                fg_color="transparent", text_color=colores.TEXTO,
-                                hover_color=colores.MENU_HOVER,
-                                command=lambda n=nombre: self.mostrar(n))
-            boton.pack(fill="x", padx=8, pady=4)
+        menu = ft.Column(self.armar_logo(), spacing=4)
+        for nombre in SECCIONES:
+            boton = shad.Button(nombre, leading=ICONOS[nombre], width=ANCHO_MENU - 16, color=colores.TEXTO,
+                                on_click=lambda e, n=nombre: self.mostrar(n))
+            menu.controls.append(boton)
             self.botones[nombre] = boton
-            self.bind(f"<Control-Key-{i}>", lambda e, n=nombre: self.mostrar(n))   # Ctrl+1, Ctrl+2, Ctrl+3
-        self.mostrar("Notas")
-      
-        self.protocol("WM_DELETE_WINDOW", self.al_cerrar)
-        self.after(AUTOGUARDADO_MS, self.autoguardar)
 
-    def armar_logo(self, menu):
+        filas = []
+        if self.danados:
+            filas.append(shad.Alert(title="Archivo dañado: " + ", ".join(self.danados),
+                                    description="No se guardará encima hasta que lo repares.",
+                                    variant=shad.AlertVariant.DESTRUCTIVE))
+        filas.append(ft.Row([
+            ft.Container(menu, width=ANCHO_MENU, bgcolor=colores.MENU_FONDO, padding=8),
+            ft.Container(contenido, expand=True, padding=12),
+        ], expand=True, spacing=0, vertical_alignment=ft.CrossAxisAlignment.STRETCH))
+
+        page.add(shad.Theme(color_scheme=shad.ColorScheme.RED, expand=True,
+                            content=ft.Column(filas, expand=True, spacing=0)))
+        self.mostrar("Notas")
+
+        page.on_keyboard_event = self.teclas
+        page.window.prevent_close = True       # así podemos guardar antes de cerrar
+        page.window.on_event = self.evento_ventana
+        page.run_task(self.autoguardar)
+
+    def armar_logo(self):
         # Logo provisional: cuadro rojo con las iniciales y el nombre debajo.
-        ctk.CTkLabel(menu, text="AT", width=52, height=52, corner_radius=12, fg_color=colores.ROJO,
-                     text_color="white", font=ctk.CTkFont(family=FUENTE, size=22, weight="bold")).pack(pady=(18, 6))
-        ctk.CTkLabel(menu, text="Admin Tareas", text_color=colores.TEXTO,
-                     font=ctk.CTkFont(family=FUENTE, size=15, weight="bold")).pack()
-        ctk.CTkFrame(menu, height=2, corner_radius=0, fg_color=colores.ROJO).pack(fill="x", padx=16, pady=(10, 12))
+        cuadro = ft.Container(texto("AT", color="white", tamano=22, negrita=True), width=52, height=52,
+                              bgcolor=colores.ROJO, border_radius=12, alignment=ft.Alignment.CENTER)
+        return [
+            ft.Container(height=10),
+            ft.Row([cuadro], alignment=ft.MainAxisAlignment.CENTER),
+            ft.Row([texto("Admin Tareas", tamano=15, negrita=True)], alignment=ft.MainAxisAlignment.CENTER),
+            shad.Separator(color=colores.ROJO, thickness=2, margin=ft.Margin.symmetric(vertical=8)),
+        ]
 
     def mostrar(self, nombre):
-        self.pantallas[nombre].tkraise()
-        for n, boton in self.botones.items():   # resalta la sección actual en rojo
-            if n == nombre:
-                boton.configure(fg_color=colores.MENU_ELEGIDO, text_color=colores.ROJO)
-            else:
-                boton.configure(fg_color="transparent", text_color=colores.TEXTO)
+        for n in SECCIONES:
+            elegida = n == nombre
+            self.pantallas[n].vista.visible = elegida
+            # la sección actual va con el botón relleno; las demás, transparentes
+            self.botones[n].variant = shad.ButtonVariant.SECONDARY if elegida else shad.ButtonVariant.GHOST
+        self.page.update()
+
+    def materias_cambiaron(self):
+        # Notas y Tareas comparten la lista self.materias, pero cada una tiene su propio desplegable.
+        # Cuando una agrega una materia, aquí se avisa a todas para que rehagan su desplegable.
+        for pantalla in self.pantallas.values():
+            if hasattr(pantalla, "actualizar_materias"):
+                pantalla.actualizar_materias()
+
+    def teclas(self, e):
+        # Ctrl+1, Ctrl+2, Ctrl+3 cambian de sección.
+        if e.ctrl and e.key in ("1", "2", "3"):
+            self.mostrar(SECCIONES[int(e.key) - 1])
 
     def cargar(self, modulo, nombre, por_defecto):
         try:
@@ -113,18 +130,22 @@ class App(ctk.CTk):
             except almacen.ArchivoDanado:
                 pass
 
-    def autoguardar(self):
-        self.guardar_todo()
-        self.after(AUTOGUARDADO_MS, self.autoguardar)
+    async def autoguardar(self):
+        # Corre "en paralelo" con la app: espera 30 s, guarda, y vuelve a empezar.
+        while True:
+            await asyncio.sleep(AUTOGUARDADO_S)
+            self.guardar_todo()
 
-    def al_cerrar(self):
-        self.guardar_todo()
-        self.destroy()
+    async def evento_ventana(self, e):
+        if e.type == ft.WindowEventType.CLOSE:
+            self.guardar_todo()
+            await self.page.window.destroy()
+
+
+def main(page: ft.Page):
+    App(page)
 
 
 if __name__ == "__main__":
-    cargar_fuentes()
-    ctk.set_default_color_theme(colores.TEMA)   # grises con rojo (pantallas/tema_gris_rojo.json)
-    ctk.ThemeManager.theme["CTkFont"]["family"] = FUENTE   # antes de crear widgets para que todos la usen
-    ctk.set_appearance_mode("system")
-    App().mainloop()
+    os.chdir(CARPETA)   # datos/ se busca desde aquí, igual que antes con el .bat
+    ft.run(main, assets_dir=os.path.join(CARPETA, "fuentes"))

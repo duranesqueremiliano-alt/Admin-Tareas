@@ -29,5 +29,6 @@ desktop.ini
 modelos/
 dataset/
 
-# --- Fotos de apuntes para transcribir ---
-fotos_apuntes/
+# --- Archivos de Claude Code ---
+.claude/worktrees/
+Claude outputs/

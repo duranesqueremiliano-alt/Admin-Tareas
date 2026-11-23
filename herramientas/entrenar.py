@@ -8,28 +8,26 @@
 #   python herramientas/entrenar.py --epocas 20 --lote 8 --lr 3e-5
 #   python herramientas/entrenar.py --continuar     # sigue desde tu modelo propio en vez del de Microsoft
 import argparse
+import csv
 import os
 import random
 import sys
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from m import ocr  # noqa: E402
-import etiquetas  # noqa: E402
+
+DATASET = os.path.join(RAIZ, "dataset")
 
 
-def leer_etiquetas(nombre, incluir_claude=False):
-    """Solo los renglones que confirmaste en revisar.py (estado 'ok'). Los demás no se usan:
-    un texto mal etiquetado le enseña mal al modelo. Con incluir_claude también entran los
-    que corrigió Claude y todavía no revisaste."""
-    validos = ("ok", "claude") if incluir_claude else ("ok",)
-    filas = etiquetas.leer(nombre)
-    ignorados = sum(1 for f in filas if f["estado"] in etiquetas.SIN_CONFIRMAR and f["estado"] not in validos)
-    if ignorados:
-        print(f"   {nombre}: {ignorados} renglones sin confirmar se ignoran (revísalos con herramientas/revisar.py)")
-    pares = [(etiquetas.ruta_imagen(nombre, f), f["words"].strip()) for f in filas if f["estado"] in validos]
-    return [(ruta, texto) for ruta, texto in pares if texto and os.path.isfile(ruta)]
+def leer_etiquetas(nombre):
+    carpeta = os.path.join(DATASET, nombre)
+    archivo = os.path.join(carpeta, "labels.csv")
+    if not os.path.isfile(archivo):
+        return []
+    with open(archivo, newline="", encoding="utf-8") as f:
+        filas = [(os.path.join(carpeta, r["filename"]), r["words"].strip()) for r in csv.DictReader(f)]
+    return [(ruta, texto) for ruta, texto in filas if texto and os.path.isfile(ruta)]
 
 
 def distancia(a, b):
@@ -57,15 +55,11 @@ def main():
     p.add_argument("--lote", type=int, default=4)
     p.add_argument("--lr", type=float, default=5e-5)
     p.add_argument("--continuar", action="store_true", help="partir de modelos/propio_trocr")
-    p.add_argument("--incluir-claude", action="store_true",
-                   help="usar también los renglones corregidos por Claude aunque no los hayas confirmado")
     args = p.parse_args()
 
-    entrenamiento = leer_etiquetas("entrenamiento", args.incluir_claude)
-    validacion = leer_etiquetas("validacion", args.incluir_claude)
+    entrenamiento, validacion = leer_etiquetas("entrenamiento"), leer_etiquetas("validacion")
     if not entrenamiento:
-        print("No hay renglones aceptados. Primero: python herramientas/crear_dataset.py tus_fotos/"
-              "  y luego confírmalos con: python herramientas/revisar.py")
+        print("No hay datos. Primero: python herramientas/crear_dataset.py tus_fotos/  y corrige labels.csv")
         return 1
     if not validacion:   # si no hay validación, aparta un 10 %
         random.shuffle(entrenamiento)
